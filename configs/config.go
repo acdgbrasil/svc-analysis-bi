@@ -70,6 +70,9 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("config: invalid DB_PORT: %w", err)
 	}
+	if dbPort < 1 || dbPort > 65535 {
+		return Config{}, ErrInvalidDBConfig
+	}
 
 	maxConns, err := envInt("DB_MAX_CONNS", 10)
 	if err != nil {

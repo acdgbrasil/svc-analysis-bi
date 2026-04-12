@@ -80,7 +80,9 @@ func RunMigrations(ctx context.Context, db *DB, migrations []Migration) error {
 			return fmt.Errorf("%w: failed to begin tx for v%d: %v", ErrMigrationFailed, m.Version, err)
 		}
 
-		if _, err := tx.Exec(ctx, m.SQL); err != nil {
+		// Use simple protocol for multi-statement SQL (pgx extended protocol
+		// does not support multiple statements in a single Exec call).
+		if _, err := tx.Conn().Exec(ctx, m.SQL); err != nil {
 			_ = tx.Rollback(ctx)
 			return fmt.Errorf("%w: v%d (%s) failed: %v", ErrMigrationFailed, m.Version, m.Name, err)
 		}

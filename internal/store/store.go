@@ -4,9 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// Option configures the database connection pool.
+type Option func(*pgxpool.Config)
+
+// WithIdleTimeout sets the maximum idle time for connections in the pool.
+func WithIdleTimeout(d time.Duration) Option {
+	return func(cfg *pgxpool.Config) {
+		cfg.MaxConnIdleTime = d
+	}
+}
 
 var (
 	ErrConnectionFailed      = errors.New("store: failed to connect to database")
@@ -27,12 +38,15 @@ type DB struct {
 }
 
 // New creates a new DB by establishing a pgx connection pool.
-func New(ctx context.Context, dsn string, maxConns int) (*DB, error) {
+func New(ctx context.Context, dsn string, maxConns int, opts ...Option) (*DB, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrConnectionFailed, err)
 	}
 	cfg.MaxConns = int32(maxConns)
+	for _, opt := range opts {
+		opt(cfg)
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
