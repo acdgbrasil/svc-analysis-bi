@@ -69,8 +69,8 @@ func (a *Anonymizer) anonymizePatientCreated(data []byte) (AnonymizedRecord, err
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" || evt.BirthDate == "" {
-		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields (patientId, metadata.eventId, or birthDate)", ErrAnonymizationFailed)
+	if evt.PatientID == "" || evt.ID == "" {
+		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields (patientId or id)", ErrAnonymizationFailed)
 	}
 
 	hash, err := domain.HashPatientID(evt.PatientID, a.salt)
@@ -78,55 +78,48 @@ func (a *Anonymizer) anonymizePatientCreated(data []byte) (AnonymizedRecord, err
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
 
-	birthDate, err := time.Parse("2006-01-02", evt.BirthDate)
-	if err != nil {
-		return AnonymizedRecord{}, fmt.Errorf("%w: invalid birthDate: %v", ErrDeserializationFailed, err)
-	}
-
-	// Use end of previous year as reference for demographic age banding.
-	// This follows the convention of reporting patient age at the start of
-	// the calendar year, which aligns with the monthly-grain star schema.
-	ageRef := time.Date(occurredAt.Year()-1, 12, 31, 23, 59, 59, 0, time.UTC)
-	ageBand, err := domain.GeneralizeAge(birthDate, ageRef)
-	if err != nil {
-		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
-	}
-
-	geo, err := a.geo.FindByCEP(evt.CEP)
-	if err != nil {
-		return AnonymizedRecord{}, fmt.Errorf("%w: CEP lookup: %v", ErrAnonymizationFailed, err)
-	}
-
-	sex := mapSex(evt.Sex)
-
-	var incomeBand domain.IncomeBand
-	if evt.TotalIncomeCents != nil {
-		incomeBand = domain.GeneralizeIncome(*evt.TotalIncomeCents)
-	} else {
-		incomeBand = domain.IncomeBand0to05SM
-	}
-
 	period := domain.PeriodFromTime(occurredAt)
+	snapshot := &SnapshotPayload{
+		HousingType: evt.HousingType,
+	}
+
+	// BirthDate, Sex, CEP are optional in PatientCreatedEvent — they may
+	// arrive in separate assessment update events (SocialIdentityUpdated, etc.)
+	if evt.BirthDate != "" {
+		birthDate, parseErr := time.Parse("2006-01-02", evt.BirthDate)
+		if parseErr == nil {
+			ageRef := time.Date(occurredAt.Year()-1, 12, 31, 23, 59, 59, 0, time.UTC)
+			if ageBand, ageErr := domain.GeneralizeAge(birthDate, ageRef); ageErr == nil {
+				snapshot.AgeBand = ageBand
+			}
+		}
+	}
+
+	snapshot.Sex = mapSex(evt.Sex) // defaults to SexUnknown for empty string
+
+	if evt.CEP != "" {
+		if geo, geoErr := a.geo.FindByCEP(evt.CEP); geoErr == nil {
+			snapshot.Geography = geo
+		}
+	}
+
+	if evt.TotalIncomeCents != nil {
+		snapshot.IncomeBand = domain.GeneralizeIncome(*evt.TotalIncomeCents)
+	}
 
 	return AnonymizedRecord{
 		Kind:        FactKindPatientSnapshot,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventPatientCreated,
 		OccurredAt:  occurredAt,
 		Period:      period,
 		PatientHash: hash,
-		Snapshot: &SnapshotPayload{
-			AgeBand:     ageBand,
-			Sex:         sex,
-			Geography:   geo,
-			HousingType: evt.HousingType,
-			IncomeBand:  incomeBand,
-		},
+		Snapshot:    snapshot,
 	}, nil
 }
 
@@ -140,7 +133,7 @@ func (a *Anonymizer) anonymizeHealthStatus(data []byte) (AnonymizedRecord, error
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -149,7 +142,7 @@ func (a *Anonymizer) anonymizeHealthStatus(data []byte) (AnonymizedRecord, error
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -165,7 +158,7 @@ func (a *Anonymizer) anonymizeHealthStatus(data []byte) (AnonymizedRecord, error
 
 	return AnonymizedRecord{
 		Kind:        FactKindDiagnosis,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventHealthStatusUpdated,
 		OccurredAt:  occurredAt,
 		Period:      period,
@@ -190,7 +183,7 @@ func (a *Anonymizer) anonymizeAppointment(data []byte) (AnonymizedRecord, error)
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -199,7 +192,7 @@ func (a *Anonymizer) anonymizeAppointment(data []byte) (AnonymizedRecord, error)
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -208,13 +201,13 @@ func (a *Anonymizer) anonymizeAppointment(data []byte) (AnonymizedRecord, error)
 
 	return AnonymizedRecord{
 		Kind:        FactKindAppointment,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventAppointmentRegistered,
 		OccurredAt:  occurredAt,
 		Period:      period,
 		PatientHash: hash,
 		Appointment: &AppointmentPayload{
-			AppointmentType: evt.AppointmentType,
+			AppointmentType: evt.Type,
 		},
 	}, nil
 }
@@ -229,7 +222,7 @@ func (a *Anonymizer) anonymizeReferral(data []byte) (AnonymizedRecord, error) {
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -238,7 +231,7 @@ func (a *Anonymizer) anonymizeReferral(data []byte) (AnonymizedRecord, error) {
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -247,7 +240,7 @@ func (a *Anonymizer) anonymizeReferral(data []byte) (AnonymizedRecord, error) {
 
 	return AnonymizedRecord{
 		Kind:        FactKindReferral,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventReferralCreated,
 		OccurredAt:  occurredAt,
 		Period:      period,
@@ -268,7 +261,7 @@ func (a *Anonymizer) anonymizeViolation(data []byte) (AnonymizedRecord, error) {
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -277,7 +270,7 @@ func (a *Anonymizer) anonymizeViolation(data []byte) (AnonymizedRecord, error) {
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -286,7 +279,7 @@ func (a *Anonymizer) anonymizeViolation(data []byte) (AnonymizedRecord, error) {
 
 	return AnonymizedRecord{
 		Kind:        FactKindViolation,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventRightsViolationReported,
 		OccurredAt:  occurredAt,
 		Period:      period,
@@ -307,7 +300,7 @@ func (a *Anonymizer) anonymizeFamilyMemberAdded(data []byte) (AnonymizedRecord, 
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -316,7 +309,7 @@ func (a *Anonymizer) anonymizeFamilyMemberAdded(data []byte) (AnonymizedRecord, 
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -325,7 +318,7 @@ func (a *Anonymizer) anonymizeFamilyMemberAdded(data []byte) (AnonymizedRecord, 
 
 	return AnonymizedRecord{
 		Kind:        FactKindFamilyComposition,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventFamilyMemberAdded,
 		OccurredAt:  occurredAt,
 		Period:      period,
@@ -348,7 +341,7 @@ func (a *Anonymizer) anonymizeFamilyMemberRemoved(data []byte) (AnonymizedRecord
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -357,7 +350,7 @@ func (a *Anonymizer) anonymizeFamilyMemberRemoved(data []byte) (AnonymizedRecord
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -366,7 +359,7 @@ func (a *Anonymizer) anonymizeFamilyMemberRemoved(data []byte) (AnonymizedRecord
 
 	return AnonymizedRecord{
 		Kind:        FactKindFamilyComposition,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventFamilyMemberRemoved,
 		OccurredAt:  occurredAt,
 		Period:      period,
@@ -388,7 +381,7 @@ func (a *Anonymizer) anonymizeCaregiverAssigned(data []byte) (AnonymizedRecord, 
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -397,7 +390,7 @@ func (a *Anonymizer) anonymizeCaregiverAssigned(data []byte) (AnonymizedRecord, 
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -407,7 +400,7 @@ func (a *Anonymizer) anonymizeCaregiverAssigned(data []byte) (AnonymizedRecord, 
 	// Minimal snapshot update -- caregiverId is PII and discarded
 	return AnonymizedRecord{
 		Kind:        FactKindPatientSnapshot,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   domain.EventPrimaryCaregiverAssigned,
 		OccurredAt:  occurredAt,
 		Period:      period,
@@ -426,7 +419,7 @@ func (a *Anonymizer) anonymizeGenericAssessment(eventType domain.EventType, data
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrDeserializationFailed, err)
 	}
 
-	if evt.PatientID == "" || evt.Metadata.EventID == "" {
+	if evt.PatientID == "" || evt.ID == "" {
 		return AnonymizedRecord{}, fmt.Errorf("%w: missing required fields", ErrAnonymizationFailed)
 	}
 
@@ -435,7 +428,7 @@ func (a *Anonymizer) anonymizeGenericAssessment(eventType domain.EventType, data
 		return AnonymizedRecord{}, fmt.Errorf("%w: %v", ErrAnonymizationFailed, err)
 	}
 
-	occurredAt, err := time.Parse(time.RFC3339, evt.Metadata.OccurredAt)
+	occurredAt, err := time.Parse(time.RFC3339, evt.OccurredAt)
 	if err != nil {
 		return AnonymizedRecord{}, fmt.Errorf("%w: invalid occurredAt: %v", ErrDeserializationFailed, err)
 	}
@@ -444,7 +437,7 @@ func (a *Anonymizer) anonymizeGenericAssessment(eventType domain.EventType, data
 
 	return AnonymizedRecord{
 		Kind:        FactKindPatientSnapshot,
-		EventID:     evt.Metadata.EventID,
+		EventID:     evt.ID,
 		EventType:   eventType,
 		OccurredAt:  occurredAt,
 		Period:      period,

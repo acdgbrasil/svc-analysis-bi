@@ -23,16 +23,14 @@ func TestPipeline_HappyPath_MessageFlowsThrough(t *testing.T) {
 	registry := NewEventHandlerRegistry(geoLookup, salt)
 
 	patientCreatedPayload, _ := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-pipeline-001",
-			"occurredAt":    "2025-06-15T10:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId": "pat-uuid-pipeline",
-		"personId":  "person-uuid-pipeline",
-		"birthDate": "1990-03-15",
-		"sex":       "MALE",
-		"cep":       "13083970",
+		"id":         "evt-pipeline-001",
+		"occurredAt": "2025-06-15T10:00:00Z",
+		"actorId":    "actor-001",
+		"patientId":  "pat-uuid-pipeline",
+		"personId":   "person-uuid-pipeline",
+		"birthDate":  "1990-03-15",
+		"sex":        "MALE",
+		"cep":        "13083970",
 	})
 
 	ackTrack := newAckTracker()
@@ -89,16 +87,14 @@ func TestPipeline_HappyPath_MultipleMessages(t *testing.T) {
 
 	makePatientEvent := func(eventID, patientID string) []byte {
 		data, _ := json.Marshal(map[string]any{
-			"metadata": map[string]any{
-				"eventId":       eventID,
-				"occurredAt":    "2025-06-15T10:00:00Z",
-				"schemaVersion": "1.0",
-			},
-			"patientId": patientID,
-			"personId":  "person-001",
-			"birthDate": "1990-01-01",
-			"sex":       "FEMALE",
-			"cep":       "01310100",
+			"id":         eventID,
+			"occurredAt": "2025-06-15T10:00:00Z",
+			"actorId":    "actor-001",
+			"patientId":  patientID,
+			"personId":   "person-001",
+			"birthDate":  "1990-01-01",
+			"sex":        "FEMALE",
+			"cep":        "01310100",
 		})
 		return data
 	}
@@ -161,7 +157,7 @@ func TestPipeline_UnknownEventType_SentToDLQ(t *testing.T) {
 
 	ackTrack := newAckTracker()
 
-	unknownPayload := []byte(`{"metadata":{"eventId":"evt-unknown-001","occurredAt":"2025-06-15T10:00:00Z","schemaVersion":"1.0"}}`)
+	unknownPayload := []byte(`{"id":"evt-unknown-001","occurredAt":"2025-06-15T10:00:00Z","actorId":"actor-001"}`)
 
 	consumer := newFakeConsumer(RawMessage{
 		Subject: "social-care.unknown.event.type",
@@ -217,16 +213,14 @@ func TestPipeline_DuplicateEvent_SkippedAndAcked(t *testing.T) {
 	registry := NewEventHandlerRegistry(geoLookup, salt)
 
 	payload, _ := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-dup-001",
-			"occurredAt":    "2025-06-15T10:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId": "pat-dup",
-		"personId":  "person-dup",
-		"birthDate": "1990-01-01",
-		"sex":       "MALE",
-		"cep":       "13083970",
+		"id":         "evt-dup-001",
+		"occurredAt": "2025-06-15T10:00:00Z",
+		"actorId":    "actor-001",
+		"patientId":  "pat-dup",
+		"personId":   "person-dup",
+		"birthDate":  "1990-01-01",
+		"sex":        "MALE",
+		"cep":        "13083970",
 	})
 
 	ackTrack := newAckTracker()
@@ -325,16 +319,14 @@ func TestPipeline_AckOnlyAfterMaterialization(t *testing.T) {
 	registry := NewEventHandlerRegistry(geoLookup, salt)
 
 	payload, _ := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-noack-001",
-			"occurredAt":    "2025-06-15T10:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId": "pat-noack",
-		"personId":  "person-noack",
-		"birthDate": "1990-01-01",
-		"sex":       "MALE",
-		"cep":       "13083970",
+		"id":         "evt-noack-001",
+		"occurredAt": "2025-06-15T10:00:00Z",
+		"actorId":    "actor-001",
+		"patientId":  "pat-noack",
+		"personId":   "person-noack",
+		"birthDate":  "1990-01-01",
+		"sex":        "MALE",
+		"cep":        "13083970",
 	})
 
 	ackTrack := newAckTracker()
