@@ -3,24 +3,26 @@ package domain
 // EventType enumerates all NATS subjects this service subscribes to.
 type EventType string
 
+// Event subjects match the NATS subjects published by svc-social-care's
+// NATSEventPublisher, which uses "social-care.events.<SwiftTypeName>".
 const (
-	EventPatientCreated           EventType = "social-care.patient.created"
-	EventFamilyMemberAdded        EventType = "social-care.family-member.added"
-	EventFamilyMemberRemoved      EventType = "social-care.family-member.removed"
-	EventPrimaryCaregiverAssigned EventType = "social-care.primary-caregiver.assigned"
-	EventSocialIdentityUpdated    EventType = "social-care.social-identity.updated"
-	EventHousingConditionUpdated  EventType = "social-care.housing-condition.updated"
-	EventSocioEconomicUpdated     EventType = "social-care.socioeconomic-situation.updated"
-	EventWorkAndIncomeUpdated     EventType = "social-care.work-and-income.updated"
-	EventEducationalStatusUpdated EventType = "social-care.educational-status.updated"
-	EventHealthStatusUpdated      EventType = "social-care.health-status.updated"
-	EventCommunitySupportUpdated  EventType = "social-care.community-support-network.updated"
-	EventSocialHealthSummaryUpdated EventType = "social-care.social-health-summary.updated"
-	EventAppointmentRegistered    EventType = "social-care.appointment.registered"
-	EventIntakeInfoUpdated        EventType = "social-care.intake-info.updated"
-	EventPlacementHistoryUpdated  EventType = "social-care.placement-history.updated"
-	EventRightsViolationReported  EventType = "social-care.rights-violation.reported"
-	EventReferralCreated          EventType = "social-care.referral.created"
+	EventPatientCreated             EventType = "social-care.events.PatientCreatedEvent"
+	EventFamilyMemberAdded          EventType = "social-care.events.FamilyMemberAddedEvent"
+	EventFamilyMemberRemoved        EventType = "social-care.events.FamilyMemberRemovedEvent"
+	EventPrimaryCaregiverAssigned   EventType = "social-care.events.PrimaryCaregiverAssignedEvent"
+	EventSocialIdentityUpdated      EventType = "social-care.events.SocialIdentityUpdatedEvent"
+	EventHousingConditionUpdated    EventType = "social-care.events.HousingConditionUpdatedEvent"
+	EventSocioEconomicUpdated       EventType = "social-care.events.SocioEconomicSituationUpdatedEvent"
+	EventWorkAndIncomeUpdated       EventType = "social-care.events.WorkAndIncomeUpdatedEvent"
+	EventEducationalStatusUpdated   EventType = "social-care.events.EducationalStatusUpdatedEvent"
+	EventHealthStatusUpdated        EventType = "social-care.events.HealthStatusUpdatedEvent"
+	EventCommunitySupportUpdated    EventType = "social-care.events.CommunitySupportNetworkUpdatedEvent"
+	EventSocialHealthSummaryUpdated EventType = "social-care.events.SocialHealthSummaryUpdatedEvent"
+	EventAppointmentRegistered      EventType = "social-care.events.SocialCareAppointmentRegisteredEvent"
+	EventIntakeInfoUpdated          EventType = "social-care.events.IntakeInfoUpdatedEvent"
+	EventPlacementHistoryUpdated    EventType = "social-care.events.PlacementHistoryUpdatedEvent"
+	EventRightsViolationReported    EventType = "social-care.events.RightsViolationReportedEvent"
+	EventReferralCreated            EventType = "social-care.events.ReferralCreatedEvent"
 )
 
 // EventMetadata contains traceability fields present in every event.

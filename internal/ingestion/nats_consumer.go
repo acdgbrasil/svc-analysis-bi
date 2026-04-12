@@ -50,10 +50,10 @@ func (c *natsConsumer) Subscribe(ctx context.Context, out chan<- RawMessage) err
 		return fmt.Errorf("%w: jetstream: %v", ErrConsumerConnectionFailed, err)
 	}
 
-	// Subscribe with durable consumer. The filter matches all subjects
-	// under the configured stream that follow the social-care event pattern.
+	// Subscribe with durable consumer. Matches subjects published by
+	// svc-social-care's NATSEventPublisher: "social-care.events.<EventType>".
 	sub, err := js.PullSubscribe(
-		"social-care.*.*",
+		"social-care.events.*",
 		c.cfg.ConsumerName,
 		nats.BindStream(c.cfg.StreamName),
 	)
