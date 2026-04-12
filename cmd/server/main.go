@@ -165,6 +165,36 @@ func run() int {
 		logger.Warn("JWKS_URL not configured, running in dev mode without authentication")
 	}
 
+	// Start carry-forward scheduler (runs on 1st of each month)
+	carryForward := store.NewCarryForwardJob(db.Pool())
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour) // check every hour
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				now := time.Now()
+				if now.Day() == 1 && now.Hour() == 0 {
+					newPeriod := domain.PeriodFromTime(now)
+					count, err := carryForward.Run(ctx, newPeriod)
+					if err != nil {
+						logger.Error("carry-forward failed", "error", err)
+					} else {
+						logger.Info("carry-forward completed", "period", newPeriod.YearMonth(), "rows", count)
+					}
+					// Refresh materialized views after carry-forward
+					if err := store.RefreshMaterializedViews(ctx, db.Pool()); err != nil {
+						logger.Error("materialized view refresh failed", "error", err)
+					} else {
+						logger.Info("materialized views refreshed")
+					}
+				}
+			}
+		}
+	}()
+
 	// Wire HTTP router
 	router := api.NewRouter(api.RouterDeps{
 		Logger:         logger,

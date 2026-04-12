@@ -199,5 +199,42 @@ ALTER TABLE fact_family_composition
     ADD CONSTRAINT uq_fact_family_composition_composite
     UNIQUE (period_id, geography_id);`,
 		},
+		{
+			Version: 5,
+			Name:    "create materialized views for indicator queries",
+			SQL: `
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_demographics AS
+SELECT
+    ab.band_label AS age_band,
+    s.label AS sex,
+    g.mesoregion_code,
+    g.mesoregion_name,
+    p.year_month AS period,
+    COUNT(*) AS count
+FROM fact_patient_snapshot fps
+JOIN dim_age_band ab ON fps.age_band_id = ab.id
+JOIN dim_sex s ON fps.sex_id = s.id
+JOIN dim_geography g ON fps.geography_id = g.id
+JOIN dim_period p ON fps.period_id = p.id
+GROUP BY ab.band_label, s.label, g.mesoregion_code, g.mesoregion_name, p.year_month;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_demographics
+ON mv_demographics (age_band, sex, mesoregion_code, period);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_epidemiological AS
+SELECT
+    d.icd_code,
+    d.icd_label,
+    p.year_month AS period,
+    SUM(fd.total_cases) AS total_cases,
+    SUM(fd.new_cases) AS new_cases
+FROM fact_diagnosis fd
+JOIN dim_diagnosis d ON fd.diagnosis_id = d.id
+JOIN dim_period p ON fd.period_id = p.id
+GROUP BY d.icd_code, d.icd_label, p.year_month;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_epidemiological
+ON mv_epidemiological (icd_code, period);`,
+		},
 	}
 }
