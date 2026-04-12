@@ -33,10 +33,10 @@ func TestHashPatientID(t *testing.T) {
 			wantErr:   nil,
 		},
 		{
-			name:      "whitespace-only salt returns ErrEmptySalt",
+			name:      "whitespace-only salt is accepted (not empty)",
 			patientID: "patient-123",
 			salt:      "   ",
-			wantErr:   nil, // contract says "empty", whitespace is not empty
+			wantErr:   nil,
 		},
 	}
 

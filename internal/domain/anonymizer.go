@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"time"
@@ -35,16 +36,16 @@ func allAgeBands() []AgeBand {
 	}
 }
 
-// HashPatientID produces an irreversible SHA-256 digest of the patientID
-// concatenated with the provided salt.
+// HashPatientID produces an irreversible HMAC-SHA256 digest of the patientID
+// keyed with the provided salt. Using HMAC avoids ambiguous concatenation
+// (e.g., "ab"+"c" vs "a"+"bc" producing the same digest).
 func HashPatientID(patientID string, salt string) (PatientHash, error) {
 	if salt == "" {
 		return "", ErrEmptySalt
 	}
-	h := sha256.New()
-	h.Write([]byte(patientID))
-	h.Write([]byte(salt))
-	return PatientHash(hex.EncodeToString(h.Sum(nil))), nil
+	mac := hmac.New(sha256.New, []byte(salt))
+	mac.Write([]byte(patientID))
+	return PatientHash(hex.EncodeToString(mac.Sum(nil))), nil
 }
 
 // GeneralizeAge computes the patient's age at referenceDate from birthDate,

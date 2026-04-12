@@ -140,7 +140,6 @@ const (
 )
 
 var (
-	ErrInvalidCEP          = errors.New("invalid CEP: must be exactly 8 digits")
 	ErrCEPWrongLength      = errors.New("CEP must be exactly 8 characters")
 	ErrCEPNonDigit         = errors.New("CEP must contain only digits")
 	ErrCEPNotFound         = errors.New("CEP not found in geography lookup")

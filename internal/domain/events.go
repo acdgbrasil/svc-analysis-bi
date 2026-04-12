@@ -60,10 +60,9 @@ type PrimaryCaregiverAssignedEvent struct {
 }
 
 // AssessmentUpdatedEvent is the generic payload for all assessment updates.
-// Before/After are kept as raw JSON bytes because the concrete assessment
+// Before/After are kept as []byte (raw JSON) because the concrete assessment
 // type varies by NATS subject (10 different schemas). The ingestion layer
-// deserializes them into typed structs based on the EventType. Using
-// json.RawMessage avoids map[string]any while preserving deferred decoding.
+// deserializes them into typed structs based on the EventType.
 type AssessmentUpdatedEvent struct {
 	Metadata  EventMetadata
 	PatientID string
