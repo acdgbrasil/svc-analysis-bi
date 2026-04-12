@@ -7,17 +7,208 @@ cep_prefix,mesoregion_code,mesoregion_name,microregion_code,microregion_name,sta
 06000,3550,Metropolitana de Sao Paulo,35052,Osasco,35,Sao Paulo,Sudeste
 07000,3550,Metropolitana de Sao Paulo,35053,Guarulhos,35,Sao Paulo,Sudeste
 08000,3550,Metropolitana de Sao Paulo,35054,Itaquaquecetuba,35,Sao Paulo,Sudeste
-09000,3550,Metropolitana de Sao Paulo,35055,Santo Andre,35,Sao Paulo,Sudeste
-10000,3301,Metropolitana do Rio de Janeiro,33001,Rio de Janeiro,33,Rio de Janeiro,Sudeste
+09000,3550,Metropolitana de Sao Paulo,35055,Santos,35,Sao Paulo,Sudeste
+10000,3548,Macro Metropolitana Paulista,35043,Jundiai,35,Sao Paulo,Sudeste
+11000,3549,Litoral Sul Paulista,35050,Registro,35,Sao Paulo,Sudeste
+12000,3541,Vale do Paraiba Paulista,35037,Sao Jose dos Campos,35,Sao Paulo,Sudeste
+13000,3548,Macro Metropolitana Paulista,35044,Campinas,35,Sao Paulo,Sudeste
+14000,3543,Ribeirao Preto,35026,Ribeirao Preto,35,Sao Paulo,Sudeste
+15000,3544,Aracatuba,35028,Aracatuba,35,Sao Paulo,Sudeste
+16000,3545,Sao Jose do Rio Preto,35029,Sao Jose do Rio Preto,35,Sao Paulo,Sudeste
+17000,3546,Marilia,35036,Marilia,35,Sao Paulo,Sudeste
+18000,3547,Itapetininga,35041,Itapetininga,35,Sao Paulo,Sudeste
+19000,3542,Piracicaba,35039,Piracicaba,35,Sao Paulo,Sudeste
 20000,3301,Metropolitana do Rio de Janeiro,33001,Rio de Janeiro,33,Rio de Janeiro,Sudeste
 21000,3301,Metropolitana do Rio de Janeiro,33002,Niteroi,33,Rio de Janeiro,Sudeste
 22000,3301,Metropolitana do Rio de Janeiro,33001,Rio de Janeiro,33,Rio de Janeiro,Sudeste
 23000,3301,Metropolitana do Rio de Janeiro,33003,Nova Iguacu,33,Rio de Janeiro,Sudeste
 24000,3301,Metropolitana do Rio de Janeiro,33002,Niteroi,33,Rio de Janeiro,Sudeste
+25000,3302,Noroeste Fluminense,33006,Itaperuna,33,Rio de Janeiro,Sudeste
+26000,3303,Norte Fluminense,33004,Campos dos Goytacazes,33,Rio de Janeiro,Sudeste
+27000,3304,Centro Fluminense,33008,Tres Rios,33,Rio de Janeiro,Sudeste
+28000,3305,Baixadas,33010,Bacia de Sao Joao,33,Rio de Janeiro,Sudeste
+28600,3306,Sul Fluminense,33013,Volta Redonda,33,Rio de Janeiro,Sudeste
+29000,3201,Noroeste Espírito-santense,32001,Barra de Sao Francisco,32,Espirito Santo,Sudeste
+29100,3202,Litoral Norte Espírito-santense,32003,Linhares,32,Espirito Santo,Sudeste
+29200,3203,Central Espírito-santense,32005,Santa Teresa,32,Espirito Santo,Sudeste
+29300,3204,Sul Espírito-santense,32009,Cachoeiro de Itapemirim,32,Espirito Santo,Sudeste
+29500,3203,Central Espírito-santense,32007,Vitoria,32,Espirito Santo,Sudeste
+29700,3203,Central Espírito-santense,32007,Vitoria,32,Espirito Santo,Sudeste
+29900,3204,Sul Espírito-santense,32010,Alegre,32,Espirito Santo,Sudeste
 30000,3107,Metropolitana de Belo Horizonte,31030,Belo Horizonte,31,Minas Gerais,Sudeste
+31000,3107,Metropolitana de Belo Horizonte,31030,Belo Horizonte,31,Minas Gerais,Sudeste
+32000,3107,Metropolitana de Belo Horizonte,31031,Itabira,31,Minas Gerais,Sudeste
+33000,3102,Norte de Minas,31006,Montes Claros,31,Minas Gerais,Sudeste
+34000,3103,Jequitinhonha,31008,Diamantina,31,Minas Gerais,Sudeste
+35000,3101,Noroeste de Minas,31001,Unaí,31,Minas Gerais,Sudeste
+36000,3108,Zona da Mata,31033,Juiz de Fora,31,Minas Gerais,Sudeste
+37000,3109,Sul/Sudoeste de Minas,31038,Pouso Alegre,31,Minas Gerais,Sudeste
+38000,3105,Triangulo Mineiro/Alto Paranaiba,31018,Uberlandia,31,Minas Gerais,Sudeste
+39000,3104,Vale do Mucuri,31011,Teofilo Otoni,31,Minas Gerais,Sudeste
+39500,3106,Central Mineira,31024,Sete Lagoas,31,Minas Gerais,Sudeste
+39800,3110,Campo das Vertentes,31035,Sao Joao del Rei,31,Minas Gerais,Sudeste
+39900,3111,Oeste de Minas,31041,Divinopolis,31,Minas Gerais,Sudeste
+39950,3112,Vale do Rio Doce,31014,Governador Valadares,31,Minas Gerais,Sudeste
 40000,2904,Metropolitana de Salvador,29021,Salvador,29,Bahia,Nordeste
-50000,5004,Metropolitana de Campo Grande,50001,Campo Grande,50,Mato Grosso do Sul,Centro-Oeste
+41000,2904,Metropolitana de Salvador,29021,Salvador,29,Bahia,Nordeste
+42000,2904,Metropolitana de Salvador,29020,Camacari,29,Bahia,Nordeste
+43000,2903,Centro Sul Baiano,29017,Jequie,29,Bahia,Nordeste
+44000,2901,Extremo Oeste Baiano,29001,Barreiras,29,Bahia,Nordeste
+45000,2905,Sul Baiano,29024,Ilheus-Itabuna,29,Bahia,Nordeste
+46000,2902,Vale Sao-Franciscano da Bahia,29005,Juazeiro,29,Bahia,Nordeste
+47000,2906,Centro Norte Baiano,29011,Feira de Santana,29,Bahia,Nordeste
+48000,2907,Nordeste Baiano,29015,Paulo Afonso,29,Bahia,Nordeste
+49000,2801,Leste Sergipano,28003,Aracaju,28,Sergipe,Nordeste
+49100,2802,Agreste Sergipano,28004,Itabaiana,28,Sergipe,Nordeste
+49400,2803,Sertao Sergipano,28006,Nossa Senhora da Gloria,28,Sergipe,Nordeste
+50000,2603,Metropolitana de Recife,26010,Recife,26,Pernambuco,Nordeste
+51000,2603,Metropolitana de Recife,26010,Recife,26,Pernambuco,Nordeste
+52000,2603,Metropolitana de Recife,26010,Recife,26,Pernambuco,Nordeste
+53000,2603,Metropolitana de Recife,26009,Itamarica,26,Pernambuco,Nordeste
+54000,2603,Metropolitana de Recife,26010,Recife,26,Pernambuco,Nordeste
+55000,2604,Agreste Pernambucano,26012,Caruaru,26,Pernambuco,Nordeste
+56000,2605,Sao Francisco Pernambucano,26004,Petrolina,26,Pernambuco,Nordeste
+56300,2601,Sertao Pernambucano,26001,Araripina,26,Pernambuco,Nordeste
+56500,2602,Mata Pernambucana,26007,Mata Meridional Pernambucana,26,Pernambuco,Nordeste
+57000,2701,Sertao Alagoano,27001,Serrana do Sertao Alagoano,27,Alagoas,Nordeste
+57100,2702,Agreste Alagoano,27004,Arapiraca,27,Alagoas,Nordeste
+57300,2703,Leste Alagoano,27005,Mata Alagoana,27,Alagoas,Nordeste
+57600,2703,Leste Alagoano,27007,Maceio,27,Alagoas,Nordeste
+58000,2501,Sertao Paraibano,25001,Cajazeiras,25,Paraiba,Nordeste
+58100,2502,Borborema,25005,Cariri Ocidental,25,Paraiba,Nordeste
+58300,2503,Agreste Paraibano,25008,Campina Grande,25,Paraiba,Nordeste
+58400,2504,Mata Paraibana,25012,Joao Pessoa,25,Paraiba,Nordeste
+59000,2401,Oeste Potiguar,24002,Mossoro,24,Rio Grande do Norte,Nordeste
+59100,2402,Central Potiguar,24004,Macau,24,Rio Grande do Norte,Nordeste
+59300,2403,Agreste Potiguar,24007,Baixa Verde,24,Rio Grande do Norte,Nordeste
+59600,2404,Leste Potiguar,24009,Natal,24,Rio Grande do Norte,Nordeste
 60000,2303,Metropolitana de Fortaleza,23016,Fortaleza,23,Ceara,Nordeste
+61000,2303,Metropolitana de Fortaleza,23016,Fortaleza,23,Ceara,Nordeste
+62000,2301,Noroeste Cearense,23001,Sobral,23,Ceara,Nordeste
+62500,2304,Centro-Sul Cearense,23019,Lavras da Mangabeira,23,Ceara,Nordeste
+63000,2302,Norte Cearense,23007,Baixo Jaguaribe,23,Ceara,Nordeste
+63100,2305,Jaguaribe,23009,Medio Jaguaribe,23,Ceara,Nordeste
+63400,2306,Sul Cearense,23021,Cariri,23,Ceara,Nordeste
+63500,2307,Sertoes Cearenses,23013,Sertao de Crateus,23,Ceara,Nordeste
+64000,2201,Norte Piauiense,22001,Baixo Parnaiba Piauiense,22,Piaui,Nordeste
+64100,2202,Centro-Norte Piauiense,22005,Teresina,22,Piaui,Nordeste
+64400,2203,Sudoeste Piauiense,22010,Alto Medio Gurgueia,22,Piaui,Nordeste
+64700,2204,Sudeste Piauiense,22014,Picos,22,Piaui,Nordeste
+65000,2102,Norte Maranhense,21004,Aglomeracao Urbana de Sao Luis,21,Maranhao,Nordeste
+65100,2102,Norte Maranhense,21004,Aglomeracao Urbana de Sao Luis,21,Maranhao,Nordeste
+65400,2101,Oeste Maranhense,21001,Gurupi,21,Maranhao,Nordeste
+65600,2103,Centro Maranhense,21009,Presidente Dutra,21,Maranhao,Nordeste
+65700,2104,Leste Maranhense,21014,Chapadinha,21,Maranhao,Nordeste
+65900,2105,Sul Maranhense,21019,Gerais de Balsas,21,Maranhao,Nordeste
+66000,1501,Baixo Amazonas,15003,Obidos,15,Para,Norte
+66100,1502,Metropolitana de Belem,15007,Belem,15,Para,Norte
+66500,1502,Metropolitana de Belem,15007,Belem,15,Para,Norte
+66800,1503,Nordeste Paraense,15009,Guama,15,Para,Norte
+67000,1502,Metropolitana de Belem,15007,Belem,15,Para,Norte
+67100,1504,Sudoeste Paraense,15013,Altamira,15,Para,Norte
+67500,1505,Sudeste Paraense,15017,Paragominas,15,Para,Norte
+67600,1506,Marajo,15005,Furos de Breves,15,Para,Norte
+68000,1504,Sudoeste Paraense,15014,Itaituba,15,Para,Norte
+68100,1505,Sudeste Paraense,15018,Sao Felix do Xingu,15,Para,Norte
+68300,1503,Nordeste Paraense,15010,Tomé-Açu,15,Para,Norte
+68500,1505,Sudeste Paraense,15020,Maraba,15,Para,Norte
+68700,1501,Baixo Amazonas,15002,Santarem,15,Para,Norte
+68900,1601,Norte do Amapa,16001,Oiapoque,16,Amapa,Norte
+68950,1602,Sul do Amapa,16002,Macapa,16,Amapa,Norte
+69000,1301,Norte Amazonense,13002,Rio Negro,13,Amazonas,Norte
+69100,1302,Sudoeste Amazonense,13009,Madeira,13,Amazonas,Norte
+69300,1303,Centro Amazonense,13006,Manaus,13,Amazonas,Norte
+69400,1304,Sul Amazonense,13012,Boca do Acre,13,Amazonas,Norte
+69800,1401,Norte de Roraima,14001,Boa Vista,14,Roraima,Norte
+69900,1101,Leste Rondoniense,11001,Porto Velho,11,Rondonia,Norte
+69920,1201,Vale do Jurua,12001,Cruzeiro do Sul,12,Acre,Norte
+69950,1202,Vale do Acre,12003,Rio Branco,12,Acre,Norte
+69980,1102,Madeira-Guapore,11004,Ji-Parana,11,Rondonia,Norte
 70000,5300,Distrito Federal,53001,Brasilia,53,Distrito Federal,Centro-Oeste
+71000,5300,Distrito Federal,53001,Brasilia,53,Distrito Federal,Centro-Oeste
+72000,5300,Distrito Federal,53001,Brasilia,53,Distrito Federal,Centro-Oeste
+72800,5201,Noroeste Goiano,52001,Sao Miguel do Araguaia,52,Goias,Centro-Oeste
+73000,5202,Norte Goiano,52005,Porangatu,52,Goias,Centro-Oeste
+73700,5205,Centro Goiano,52012,Anapolis,52,Goias,Centro-Oeste
+74000,5205,Centro Goiano,52013,Goiania,52,Goias,Centro-Oeste
+75000,5203,Leste Goiano,52007,Entorno de Brasilia,52,Goias,Centro-Oeste
+75500,5204,Sul Goiano,52009,Catalao,52,Goias,Centro-Oeste
+76000,5204,Sul Goiano,52010,Pires do Rio,52,Goias,Centro-Oeste
+76300,5201,Noroeste Goiano,52003,Aragarças,52,Goias,Centro-Oeste
+76400,5204,Sul Goiano,52011,Meia Ponte,52,Goias,Centro-Oeste
+76600,5205,Centro Goiano,52014,Iporá,52,Goias,Centro-Oeste
+76800,1701,Ocidental do Tocantins,17001,Bico do Papagaio,17,Tocantins,Norte
+77000,1702,Oriental do Tocantins,17003,Porto Nacional,17,Tocantins,Norte
+77300,1701,Ocidental do Tocantins,17002,Miracema do Tocantins,17,Tocantins,Norte
+77500,1702,Oriental do Tocantins,17004,Jalapao,17,Tocantins,Norte
+77800,1701,Ocidental do Tocantins,17001,Bico do Papagaio,17,Tocantins,Norte
+78000,5101,Norte Mato-Grossense,51003,Sinop,51,Mato Grosso,Centro-Oeste
+78100,5102,Nordeste Mato-Grossense,51004,Canarana,51,Mato Grosso,Centro-Oeste
+78200,5103,Sudoeste Mato-Grossense,51008,Tangara da Serra,51,Mato Grosso,Centro-Oeste
+78500,5104,Centro-Sul Mato-Grossense,51010,Cuiaba,51,Mato Grosso,Centro-Oeste
+78700,5104,Centro-Sul Mato-Grossense,51010,Cuiaba,51,Mato Grosso,Centro-Oeste
+78800,5105,Sudeste Mato-Grossense,51013,Rondonopolis,51,Mato Grosso,Centro-Oeste
+79000,5004,Pantanais Sul Mato-Grossenses,50004,Campo Grande,50,Mato Grosso do Sul,Centro-Oeste
+79100,5001,Centro Norte de Mato Grosso do Sul,50001,Campo Grande,50,Mato Grosso do Sul,Centro-Oeste
+79300,5002,Leste de Mato Grosso do Sul,50006,Tres Lagoas,50,Mato Grosso do Sul,Centro-Oeste
+79500,5003,Sudoeste de Mato Grosso do Sul,50009,Dourados,50,Mato Grosso do Sul,Centro-Oeste
+79800,5004,Pantanais Sul Mato-Grossenses,50011,Bodoquena,50,Mato Grosso do Sul,Centro-Oeste
 80000,4106,Metropolitana de Curitiba,41037,Curitiba,41,Parana,Sul
+81000,4106,Metropolitana de Curitiba,41037,Curitiba,41,Parana,Sul
+82000,4106,Metropolitana de Curitiba,41038,Paranagua,41,Parana,Sul
+83000,4106,Metropolitana de Curitiba,41037,Curitiba,41,Parana,Sul
+83200,4101,Noroeste Paranaense,41001,Paranavai,41,Parana,Sul
+84000,4102,Centro Ocidental Paranaense,41007,Goioere,41,Parana,Sul
+84200,4103,Norte Central Paranaense,41011,Londrina,41,Parana,Sul
+85000,4104,Norte Pioneiro Paranaense,41019,Jacarezinho,41,Parana,Sul
+85500,4105,Centro Oriental Paranaense,41024,Ponta Grossa,41,Parana,Sul
+85800,4107,Oeste Paranaense,41028,Cascavel,41,Parana,Sul
+85900,4108,Sudoeste Paranaense,41031,Francisco Beltrao,41,Parana,Sul
+86000,4103,Norte Central Paranaense,41011,Londrina,41,Parana,Sul
+86400,4101,Noroeste Paranaense,41003,Cianorte,41,Parana,Sul
+86600,4103,Norte Central Paranaense,41012,Maringa,41,Parana,Sul
+87000,4101,Noroeste Paranaense,41004,Umuarama,41,Parana,Sul
+87300,4102,Centro Ocidental Paranaense,41006,Campo Mourao,41,Parana,Sul
+87500,4107,Oeste Paranaense,41029,Foz do Iguacu,41,Parana,Sul
+87700,4101,Noroeste Paranaense,41001,Paranavai,41,Parana,Sul
+88000,4205,Grande Florianopolis,42012,Florianopolis,42,Santa Catarina,Sul
+88100,4206,Sul Catarinense,42014,Tubarao,42,Santa Catarina,Sul
+88300,4204,Vale do Itajai,42010,Blumenau,42,Santa Catarina,Sul
+88500,4206,Sul Catarinense,42015,Criciuma,42,Santa Catarina,Sul
+88700,4206,Sul Catarinense,42016,Ararangua,42,Santa Catarina,Sul
+88900,4201,Oeste Catarinense,42001,Sao Miguel do Oeste,42,Santa Catarina,Sul
+89000,4204,Vale do Itajai,42011,Itajai,42,Santa Catarina,Sul
+89100,4203,Norte Catarinense,42007,Joinville,42,Santa Catarina,Sul
+89200,4203,Norte Catarinense,42007,Joinville,42,Santa Catarina,Sul
+89300,4201,Oeste Catarinense,42003,Concordia,42,Santa Catarina,Sul
+89400,4203,Norte Catarinense,42006,Canoinhas,42,Santa Catarina,Sul
+89500,4201,Oeste Catarinense,42002,Chapeco,42,Santa Catarina,Sul
+89600,4201,Oeste Catarinense,42004,Joacaba,42,Santa Catarina,Sul
+89700,4202,Serrana,42005,Curitibanos,42,Santa Catarina,Sul
+89800,4201,Oeste Catarinense,42004,Joacaba,42,Santa Catarina,Sul
 90000,4314,Metropolitana de Porto Alegre,43026,Porto Alegre,43,Rio Grande do Sul,Sul
+91000,4314,Metropolitana de Porto Alegre,43026,Porto Alegre,43,Rio Grande do Sul,Sul
+92000,4314,Metropolitana de Porto Alegre,43027,Gravatai,43,Rio Grande do Sul,Sul
+93000,4314,Metropolitana de Porto Alegre,43028,Sao Leopoldo,43,Rio Grande do Sul,Sul
+94000,4314,Metropolitana de Porto Alegre,43029,Montenegro,43,Rio Grande do Sul,Sul
+95000,4307,Nordeste Rio-Grandense,43013,Caxias do Sul,43,Rio Grande do Sul,Sul
+95500,4308,Noroeste Rio-Grandense,43017,Cruz Alta,43,Rio Grande do Sul,Sul
+96000,4312,Sudoeste Rio-Grandense,43022,Campanha Ocidental,43,Rio Grande do Sul,Sul
+96200,4310,Centro Ocidental Rio-Grandense,43019,Santiago,43,Rio Grande do Sul,Sul
+96400,4312,Sudoeste Rio-Grandense,43023,Campanha Meridional,43,Rio Grande do Sul,Sul
+96600,4311,Centro Oriental Rio-Grandense,43020,Santa Cruz do Sul,43,Rio Grande do Sul,Sul
+96800,4309,Sudeste Rio-Grandense,43030,Pelotas,43,Rio Grande do Sul,Sul
+97000,4310,Centro Ocidental Rio-Grandense,43019,Santiago,43,Rio Grande do Sul,Sul
+97100,4308,Noroeste Rio-Grandense,43015,Ijui,43,Rio Grande do Sul,Sul
+97300,4310,Centro Ocidental Rio-Grandense,43018,Santa Maria,43,Rio Grande do Sul,Sul
+97500,4308,Noroeste Rio-Grandense,43014,Passo Fundo,43,Rio Grande do Sul,Sul
+97800,4308,Noroeste Rio-Grandense,43016,Frederico Westphalen,43,Rio Grande do Sul,Sul
+98000,4308,Noroeste Rio-Grandense,43017,Cruz Alta,43,Rio Grande do Sul,Sul
+98500,4308,Noroeste Rio-Grandense,43015,Ijui,43,Rio Grande do Sul,Sul
+98700,4308,Noroeste Rio-Grandense,43016,Frederico Westphalen,43,Rio Grande do Sul,Sul
+98800,4308,Noroeste Rio-Grandense,43014,Passo Fundo,43,Rio Grande do Sul,Sul
+99000,4307,Nordeste Rio-Grandense,43013,Caxias do Sul,43,Rio Grande do Sul,Sul
+99100,4307,Nordeste Rio-Grandense,43012,Vacaria,43,Rio Grande do Sul,Sul
+99300,4308,Noroeste Rio-Grandense,43017,Cruz Alta,43,Rio Grande do Sul,Sul
+99500,4311,Centro Oriental Rio-Grandense,43021,Lajeado-Estrela,43,Rio Grande do Sul,Sul
+99700,4308,Noroeste Rio-Grandense,43016,Frederico Westphalen,43,Rio Grande do Sul,Sul
