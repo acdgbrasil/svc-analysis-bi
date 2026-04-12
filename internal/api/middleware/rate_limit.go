@@ -77,7 +77,7 @@ func RateLimitWithClock(cfg RateLimitConfig, nowFn func() time.Time) func(http.H
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !bucket.allow() {
-				http.Error(w, `{"error":"Too Many Requests","status":429,"message":"rate limit exceeded"}`, http.StatusTooManyRequests)
+				writeJSONError(w, http.StatusTooManyRequests, "rate limit exceeded")
 				return
 			}
 			next.ServeHTTP(w, r)

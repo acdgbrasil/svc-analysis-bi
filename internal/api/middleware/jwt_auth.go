@@ -47,12 +47,12 @@ func JWTAuth(validator JWTValidator, skipPaths map[string]bool) func(http.Handle
 
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				http.Error(w, `{"error":"Unauthorized","status":401,"message":"missing authorization header"}`, http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "missing authorization header")
 				return
 			}
 
 			if !strings.HasPrefix(authHeader, "Bearer ") {
-				http.Error(w, `{"error":"Unauthorized","status":401,"message":"invalid authorization scheme"}`, http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "invalid authorization scheme")
 				return
 			}
 
@@ -60,7 +60,7 @@ func JWTAuth(validator JWTValidator, skipPaths map[string]bool) func(http.Handle
 
 			claims, err := validator.Validate(r.Context(), tokenString)
 			if err != nil {
-				http.Error(w, `{"error":"Unauthorized","status":401,"message":"invalid or expired token"}`, http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "invalid or expired token")
 				return
 			}
 

@@ -26,7 +26,7 @@ func Recovery(logger *slog.Logger) func(http.Handler) http.Handler {
 						"method", r.Method,
 						"path", r.URL.Path,
 					)
-					http.Error(w, `{"error":"Internal Server Error","status":500,"message":"internal error"}`, http.StatusInternalServerError)
+					writeJSONError(w, http.StatusInternalServerError, "internal error")
 				}
 			}()
 			next.ServeHTTP(w, r)
