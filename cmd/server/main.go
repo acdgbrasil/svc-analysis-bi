@@ -48,8 +48,12 @@ func run() int {
 	defer stop()
 
 	// Load geography CSV lookup
+	geoCSVPath := os.Getenv("GEO_CSV_PATH")
+	if geoCSVPath == "" {
+		geoCSVPath = "configs/ibge_mesoregions.csv"
+	}
 	var geoLookup domain.GeographyLookup
-	csvLookup, err := domain.NewCSVGeographyLookup("configs/ibge_mesoregions.csv")
+	csvLookup, err := domain.NewCSVGeographyLookup(geoCSVPath)
 	if err != nil {
 		logger.Warn("geography CSV not loaded, CEP resolution will return errors", "error", err)
 		geoLookup = &errGeographyLookup{}
@@ -83,8 +87,9 @@ func run() int {
 	// Export encoder registry
 	encoders := export.NewRegistry()
 
-	// NATS consumer (optional -- server starts without it for dev/testing)
+	// NATS consumer (optional — server starts without it for dev/testing)
 	var natsChecker api.NATSChecker
+	pipelineErr := make(chan error, 1)
 	if cfg.NATS.URL != "" {
 		nc, natsErr := nats.Connect(cfg.NATS.URL,
 			nats.MaxReconnects(-1),
@@ -95,11 +100,10 @@ func run() int {
 			logger.Warn("NATS connection failed, ingestion pipeline disabled", "error", natsErr, "url", cfg.NATS.URL)
 		} else {
 			defer nc.Close()
+			natsChecker = ingestion.NewNATSHealthChecker(nc)
 
-			checker := ingestion.NewNATSHealthChecker(nc)
-			natsChecker = checker
-
-			consumer := ingestion.NewNATSConsumer(ingestion.NATSConsumerConfig{
+			// Consumer reuses the same NATS connection (no duplicate)
+			consumer := ingestion.NewNATSConsumer(nc, ingestion.NATSConsumerConfig{
 				URL:          cfg.NATS.URL,
 				StreamName:   cfg.NATS.Stream,
 				ConsumerName: cfg.NATS.Consumer,
@@ -121,10 +125,11 @@ func run() int {
 				ingestion.WithLogger(&slogAdapter{logger: logger}),
 			)
 
-			// Start pipeline in background goroutine
+			// Start pipeline — propagate fatal errors to trigger shutdown
 			go func() {
-				if pipeErr := pipeline.Run(ctx); pipeErr != nil {
-					logger.Error("ingestion pipeline error", "error", pipeErr)
+				if pipeErr := pipeline.Run(ctx); pipeErr != nil && pipeErr != context.Canceled {
+					logger.Error("ingestion pipeline fatal error", "error", pipeErr)
+					pipelineErr <- pipeErr
 				}
 			}()
 
@@ -166,7 +171,7 @@ func run() int {
 		srvErr <- srv.ListenAndServe()
 	}()
 
-	// Wait for shutdown signal or server error
+	// Wait for shutdown signal, server error, or pipeline fatal error
 	select {
 	case <-ctx.Done():
 		logger.Info("shutdown signal received")
@@ -175,6 +180,8 @@ func run() int {
 			logger.Error("HTTP server error", "error", err)
 			return 1
 		}
+	case err := <-pipelineErr:
+		logger.Error("ingestion pipeline failed, initiating shutdown", "error", err)
 	}
 
 	// Graceful shutdown with timeout

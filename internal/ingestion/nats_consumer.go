@@ -25,39 +25,35 @@ type NATSConsumerConfig struct {
 // natsConsumer implements the Consumer interface using NATS JetStream
 // pull-based subscriptions for backpressure control.
 type natsConsumer struct {
+	nc  *nats.Conn
 	cfg NATSConsumerConfig
 }
 
-// NewNATSConsumer creates a Consumer that subscribes to a NATS JetStream
-// stream using pull-based delivery with a durable consumer name.
-func NewNATSConsumer(cfg NATSConsumerConfig) Consumer {
-	return &natsConsumer{cfg: cfg}
+// NewNATSConsumer creates a Consumer that uses an existing NATS connection
+// for JetStream pull-based delivery. The connection lifecycle is managed
+// externally (by the caller), avoiding duplicate connections.
+func NewNATSConsumer(nc *nats.Conn, cfg NATSConsumerConfig) Consumer {
+	return &natsConsumer{nc: nc, cfg: cfg}
 }
 
-// Subscribe connects to NATS, creates a pull subscription on the configured
-// stream, and delivers messages to the provided channel. It blocks until ctx
-// is cancelled or a fatal connection error occurs. The caller owns the
-// channel and must close it after Subscribe returns.
+// Subscribe creates a pull subscription on the configured stream and delivers
+// messages to the provided channel. It blocks until ctx is cancelled or a
+// fatal error occurs. The caller owns the channel and must close it after
+// Subscribe returns.
 func (c *natsConsumer) Subscribe(ctx context.Context, out chan<- RawMessage) error {
-	nc, err := nats.Connect(c.cfg.URL,
-		nats.MaxReconnects(-1),
-		nats.ReconnectWait(2*time.Second),
-		nats.Name("svc-analysis-bi"),
-	)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrConsumerConnectionFailed, err)
+	if c.nc == nil || !c.nc.IsConnected() {
+		return fmt.Errorf("%w: connection not available", ErrConsumerConnectionFailed)
 	}
-	defer nc.Close()
 
-	js, err := nc.JetStream()
+	js, err := c.nc.JetStream()
 	if err != nil {
 		return fmt.Errorf("%w: jetstream: %v", ErrConsumerConnectionFailed, err)
 	}
 
-	// Subscribe with durable consumer. The "social-care.>" filter matches
-	// all social-care domain events in the stream.
+	// Subscribe with durable consumer. The filter matches all subjects
+	// under the configured stream that follow the social-care event pattern.
 	sub, err := js.PullSubscribe(
-		"social-care.>",
+		"social-care.*.*",
 		c.cfg.ConsumerName,
 		nats.BindStream(c.cfg.StreamName),
 	)

@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewNATSConsumer_ReturnsNonNil(t *testing.T) {
-	consumer := NewNATSConsumer(NATSConsumerConfig{
+	consumer := NewNATSConsumer(nil, NATSConsumerConfig{
 		URL:          "nats://localhost:4222",
 		StreamName:   "TEST_STREAM",
 		ConsumerName: "test-consumer",
@@ -18,21 +18,20 @@ func TestNewNATSConsumer_ReturnsNonNil(t *testing.T) {
 	}
 }
 
-func TestNATSConsumer_Subscribe_InvalidURL(t *testing.T) {
-	consumer := NewNATSConsumer(NATSConsumerConfig{
-		URL:          "nats://invalid-host-that-does-not-exist:9999",
+func TestNATSConsumer_Subscribe_NilConnection(t *testing.T) {
+	consumer := NewNATSConsumer(nil, NATSConsumerConfig{
 		StreamName:   "TEST_STREAM",
 		ConsumerName: "test-consumer",
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	out := make(chan RawMessage, 1)
 	err := consumer.Subscribe(ctx, out)
 
 	if err == nil {
-		t.Fatal("expected error for invalid NATS URL, got nil")
+		t.Fatal("expected error for nil connection, got nil")
 	}
 
 	if !errors.Is(err, ErrConsumerConnectionFailed) {
