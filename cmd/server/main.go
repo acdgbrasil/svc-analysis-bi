@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/acdgbrasil/svc-analysis-bi/configs"
 	"github.com/acdgbrasil/svc-analysis-bi/internal/api"
+	"github.com/acdgbrasil/svc-analysis-bi/internal/api/middleware"
 	"github.com/acdgbrasil/svc-analysis-bi/internal/domain"
 	"github.com/acdgbrasil/svc-analysis-bi/internal/export"
 	"github.com/acdgbrasil/svc-analysis-bi/internal/ingestion"
@@ -142,11 +144,22 @@ func run() int {
 		logger.Warn("NATS not configured, ingestion pipeline disabled")
 	}
 
+	// Wire JWT validator
+	var jwtValidator middleware.JWTValidator
+	jwksURL := strings.TrimSpace(cfg.Auth.JWKSUrl)
+	if jwksURL != "" {
+		jwtValidator = middleware.NewJWKSValidator(jwksURL)
+		logger.Info("JWT validation enabled", "jwks_url", jwksURL)
+	} else {
+		logger.Warn("JWKS_URL not configured, JWT validation disabled")
+	}
+
 	// Wire HTTP router
 	router := api.NewRouter(api.RouterDeps{
 		Logger:         logger,
 		DB:             db,
 		NATS:           natsChecker,
+		JWTValidator:   jwtValidator,
 		RateLimitRPS:   10,
 		RateLimitBurst: 20,
 		Indicators:     indicatorStore,
