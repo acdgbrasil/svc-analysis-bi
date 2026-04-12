@@ -33,16 +33,14 @@ func TestHandlePatientCreated_ValidJSON(t *testing.T) {
 		{
 			name: "valid patient created event with all fields",
 			input: map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-001",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
-				"patientId":   "pat-uuid-123",
-				"personId":    "person-uuid-456",
-				"birthDate":   "1990-03-15",
-				"sex":         "MALE",
-				"cep":         "13083970",
+				"id":         "evt-001",
+				"occurredAt": "2025-06-15T10:00:00Z",
+				"actorId":    "actor-001",
+				"patientId":  "pat-uuid-123",
+				"personId":   "person-uuid-456",
+				"birthDate":  "1990-03-15",
+				"sex":        "MALE",
+				"cep":        "13083970",
 				"housingType": "apartment",
 			},
 			wantKind:  FactKindPatientSnapshot,
@@ -51,16 +49,14 @@ func TestHandlePatientCreated_ValidJSON(t *testing.T) {
 		{
 			name: "valid patient created event female",
 			input: map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-002",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
-				"patientId": "pat-uuid-789",
-				"personId":  "person-uuid-012",
-				"birthDate": "2000-01-01",
-				"sex":       "FEMALE",
-				"cep":       "01310100",
+				"id":         "evt-002",
+				"occurredAt": "2025-06-15T10:00:00Z",
+				"actorId":    "actor-001",
+				"patientId":  "pat-uuid-789",
+				"personId":   "person-uuid-012",
+				"birthDate":  "2000-01-01",
+				"sex":        "FEMALE",
+				"cep":        "01310100",
 			},
 			wantKind:  FactKindPatientSnapshot,
 			wantNoErr: true,
@@ -104,16 +100,14 @@ func TestHandlePatientCreated_PIIDiscarded(t *testing.T) {
 	handler := registry[domain.EventPatientCreated]
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-pii-001",
-			"occurredAt":    "2025-06-15T10:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId": "pat-uuid-should-be-hashed",
-		"personId":  "person-uuid-should-be-discarded",
-		"birthDate": "1985-07-20",
-		"sex":       "MALE",
-		"cep":       "13083970",
+		"id":         "evt-pii-001",
+		"occurredAt": "2025-06-15T10:00:00Z",
+		"actorId":    "actor-001",
+		"patientId":  "pat-uuid-should-be-hashed",
+		"personId":   "person-uuid-should-be-discarded",
+		"birthDate":  "1985-07-20",
+		"sex":        "MALE",
+		"cep":        "13083970",
 	}
 
 	data, _ := json.Marshal(input)
@@ -192,43 +186,28 @@ func TestHandlePatientCreated_MissingRequiredFields(t *testing.T) {
 		{
 			name: "missing patientId",
 			input: map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-001",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
-				"personId":  "p-001",
-				"birthDate": "1990-01-01",
-				"sex":       "MALE",
-				"cep":       "13083970",
+				"id":         "evt-001",
+				"occurredAt": "2025-06-15T10:00:00Z",
+				"actorId":    "actor-001",
+				"personId":   "p-001",
+				"birthDate":  "1990-01-01",
+				"sex":        "MALE",
+				"cep":        "13083970",
 			},
 		},
 		{
-			name: "missing metadata.eventId",
+			name: "missing id",
 			input: map[string]any{
-				"metadata": map[string]any{
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
-				"patientId": "pat-001",
-				"birthDate": "1990-01-01",
-				"sex":       "MALE",
-				"cep":       "13083970",
+				"occurredAt": "2025-06-15T10:00:00Z",
+				"actorId":    "actor-001",
+				"patientId":  "pat-001",
+				"birthDate":  "1990-01-01",
+				"sex":        "MALE",
+				"cep":        "13083970",
 			},
 		},
-		{
-			name: "missing birthDate",
-			input: map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-001",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
-				"patientId": "pat-001",
-				"sex":       "MALE",
-				"cep":       "13083970",
-			},
-		},
+		// birthDate is optional — missing birthDate is NOT an error
+		// (demographics may arrive via SocialIdentityUpdatedEvent instead)
 	}
 
 	for _, tt := range tests {
@@ -268,14 +247,12 @@ func TestHandleHealthStatusUpdated_ValidJSON(t *testing.T) {
 	afterBytes, _ := json.Marshal(afterPayload)
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-health-001",
-			"occurredAt":    "2025-07-01T14:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId": "pat-uuid-health",
-		"before":    nil,
-		"after":     json.RawMessage(afterBytes),
+		"id":         "evt-health-001",
+		"occurredAt": "2025-07-01T14:00:00Z",
+		"actorId":    "actor-001",
+		"patientId":  "pat-uuid-health",
+		"before":     nil,
+		"after":      json.RawMessage(afterBytes),
 	}
 
 	data, _ := json.Marshal(input)
@@ -331,15 +308,13 @@ func TestHandleAppointmentRegistered_ValidJSON(t *testing.T) {
 	}
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-appt-001",
-			"occurredAt":    "2025-08-10T09:30:00Z",
-			"schemaVersion": "1.0",
-		},
+		"id":                     "evt-appt-001",
+		"occurredAt":             "2025-08-10T09:30:00Z",
+		"actorId":                "actor-001",
 		"patientId":              "pat-uuid-appt",
 		"appointmentId":          "appt-uuid-001",
 		"professionalInChargeId": "prof-uuid-should-be-discarded",
-		"appointmentType":        "initial_assessment",
+		"type":                   "initial_assessment",
 	}
 
 	data, _ := json.Marshal(input)
@@ -367,15 +342,13 @@ func TestHandleAppointmentRegistered_PIIAbsent(t *testing.T) {
 	handler := registry[domain.EventAppointmentRegistered]
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-appt-pii",
-			"occurredAt":    "2025-08-10T09:30:00Z",
-			"schemaVersion": "1.0",
-		},
+		"id":                     "evt-appt-pii",
+		"occurredAt":             "2025-08-10T09:30:00Z",
+		"actorId":                "actor-001",
 		"patientId":              "pat-uuid-appt-raw",
 		"appointmentId":          "appt-uuid-raw",
 		"professionalInChargeId": "prof-uuid-raw",
-		"appointmentType":        "follow_up",
+		"type":                   "follow_up",
 	}
 
 	data, _ := json.Marshal(input)
@@ -415,11 +388,9 @@ func TestHandleReferralCreated_ValidJSON(t *testing.T) {
 	}
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-ref-001",
-			"occurredAt":    "2025-09-01T11:00:00Z",
-			"schemaVersion": "1.0",
-		},
+		"id":                 "evt-ref-001",
+		"occurredAt":         "2025-09-01T11:00:00Z",
+		"actorId":            "actor-001",
 		"patientId":          "pat-uuid-ref",
 		"referralId":         "ref-uuid-001",
 		"referredPersonId":   "person-uuid-referred",
@@ -484,15 +455,13 @@ func TestHandleRightsViolationReported_ValidJSON(t *testing.T) {
 	}
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-viol-001",
-			"occurredAt":    "2025-10-05T16:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId":     "pat-uuid-viol",
-		"reportId":      "report-uuid-001",
-		"victimId":      "victim-uuid-should-be-discarded",
-		"violationType": "physical_abuse",
+		"id":             "evt-viol-001",
+		"occurredAt":     "2025-10-05T16:00:00Z",
+		"actorId":        "actor-001",
+		"patientId":      "pat-uuid-viol",
+		"reportId":       "report-uuid-001",
+		"victimId":       "victim-uuid-should-be-discarded",
+		"violationType":  "physical_abuse",
 	}
 
 	data, _ := json.Marshal(input)
@@ -520,15 +489,13 @@ func TestHandleRightsViolationReported_PIIAbsent(t *testing.T) {
 	handler := registry[domain.EventRightsViolationReported]
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-viol-pii",
-			"occurredAt":    "2025-10-05T16:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId":     "pat-uuid-viol-raw",
-		"reportId":      "report-uuid-raw",
-		"victimId":      "victim-uuid-raw",
-		"violationType": "neglect",
+		"id":             "evt-viol-pii",
+		"occurredAt":     "2025-10-05T16:00:00Z",
+		"actorId":        "actor-001",
+		"patientId":      "pat-uuid-viol-raw",
+		"reportId":       "report-uuid-raw",
+		"victimId":       "victim-uuid-raw",
+		"violationType":  "neglect",
 	}
 
 	data, _ := json.Marshal(input)
@@ -565,11 +532,9 @@ func TestHandleFamilyMemberAdded_ValidJSON(t *testing.T) {
 	}
 
 	input := map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-fam-001",
-			"occurredAt":    "2025-11-01T08:00:00Z",
-			"schemaVersion": "1.0",
-		},
+		"id":           "evt-fam-001",
+		"occurredAt":   "2025-11-01T08:00:00Z",
+		"actorId":      "actor-001",
 		"patientId":    "pat-uuid-fam",
 		"memberId":     "member-uuid-should-be-discarded",
 		"relationship": "spouse",

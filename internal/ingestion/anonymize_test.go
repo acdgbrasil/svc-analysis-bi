@@ -163,7 +163,7 @@ func TestAnonymize_CEPGeneralizedToMesoregion(t *testing.T) {
 	}
 }
 
-func TestAnonymize_CEPLookupFailure(t *testing.T) {
+func TestAnonymize_CEPLookupFailure_GracefulDegradation(t *testing.T) {
 	geoLookup := newFakeGeographyLookupWithError(domain.ErrCEPNotFound)
 	salt := "test-salt"
 
@@ -171,9 +171,13 @@ func TestAnonymize_CEPLookupFailure(t *testing.T) {
 
 	evt := rawPatientEvent("pat-cep-fail", "1990-01-01", "MALE", "99999999")
 
-	_, err := anonymizer.Anonymize(context.Background(), domain.EventPatientCreated, evt)
-	if err == nil {
-		t.Fatal("expected error when CEP lookup fails")
+	// CEP is optional — lookup failure is gracefully skipped
+	rec, err := anonymizer.Anonymize(context.Background(), domain.EventPatientCreated, evt)
+	if err != nil {
+		t.Fatalf("CEP failure should be graceful, got: %v", err)
+	}
+	if rec.Snapshot.Geography.MesoregionCode != "" {
+		t.Errorf("expected empty MesoregionCode, got %q", rec.Snapshot.Geography.MesoregionCode)
 	}
 }
 
@@ -243,27 +247,23 @@ func TestAnonymize_PIIFieldsAbsent(t *testing.T) {
 			name:      "actorId absent from appointment",
 			eventType: domain.EventAppointmentRegistered,
 			rawEvent: mustJSON(map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-pii-actor",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
+				"id":                     "evt-pii-actor",
+				"occurredAt":             "2025-06-15T10:00:00Z",
+				"actorId":                "actor-uuid-must-vanish",
 				"patientId":              "pat-pii-actor",
 				"appointmentId":          "appt-pii-001",
-				"professionalInChargeId": "actor-uuid-must-vanish",
-				"appointmentType":        "initial",
+				"professionalInChargeId": "prof-uuid-must-vanish",
+				"type":                   "initial",
 			}),
-			piiValues: []string{"actor-uuid-must-vanish", "appt-pii-001"},
+			piiValues: []string{"actor-uuid-must-vanish", "prof-uuid-must-vanish", "appt-pii-001"},
 		},
 		{
 			name:      "memberId absent from family member added",
 			eventType: domain.EventFamilyMemberAdded,
 			rawEvent: mustJSON(map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-pii-member",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
+				"id":           "evt-pii-member",
+				"occurredAt":   "2025-06-15T10:00:00Z",
+				"actorId":      "actor-001",
 				"patientId":    "pat-pii-member",
 				"memberId":     "member-uuid-must-vanish",
 				"relationship": "child",
@@ -274,15 +274,13 @@ func TestAnonymize_PIIFieldsAbsent(t *testing.T) {
 			name:      "victimId absent from violation",
 			eventType: domain.EventRightsViolationReported,
 			rawEvent: mustJSON(map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-pii-victim",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
-				"patientId":     "pat-pii-victim",
-				"reportId":      "report-uuid-must-vanish",
-				"victimId":      "victim-uuid-must-vanish",
-				"violationType": "neglect",
+				"id":             "evt-pii-victim",
+				"occurredAt":     "2025-06-15T10:00:00Z",
+				"actorId":        "actor-001",
+				"patientId":      "pat-pii-victim",
+				"reportId":       "report-uuid-must-vanish",
+				"victimId":       "victim-uuid-must-vanish",
+				"violationType":  "neglect",
 			}),
 			piiValues: []string{"victim-uuid-must-vanish", "report-uuid-must-vanish"},
 		},
@@ -290,13 +288,11 @@ func TestAnonymize_PIIFieldsAbsent(t *testing.T) {
 			name:      "caregiverId absent from caregiver assigned",
 			eventType: domain.EventPrimaryCaregiverAssigned,
 			rawEvent: mustJSON(map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-pii-caregiver",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
-				"patientId":   "pat-pii-caregiver",
-				"caregiverId": "caregiver-uuid-must-vanish",
+				"id":           "evt-pii-caregiver",
+				"occurredAt":   "2025-06-15T10:00:00Z",
+				"actorId":      "actor-001",
+				"patientId":    "pat-pii-caregiver",
+				"caregiverId":  "caregiver-uuid-must-vanish",
 			}),
 			piiValues: []string{"caregiver-uuid-must-vanish"},
 		},
@@ -304,11 +300,9 @@ func TestAnonymize_PIIFieldsAbsent(t *testing.T) {
 			name:      "referredPersonId absent from referral",
 			eventType: domain.EventReferralCreated,
 			rawEvent: mustJSON(map[string]any{
-				"metadata": map[string]any{
-					"eventId":       "evt-pii-referral",
-					"occurredAt":    "2025-06-15T10:00:00Z",
-					"schemaVersion": "1.0",
-				},
+				"id":                 "evt-pii-referral",
+				"occurredAt":         "2025-06-15T10:00:00Z",
+				"actorId":            "actor-001",
 				"patientId":          "pat-pii-referral",
 				"referralId":         "referral-uuid-must-vanish",
 				"referredPersonId":   "referred-uuid-must-vanish",
@@ -445,32 +439,28 @@ func rawPatientEvent(patientID, birthDate, sex, cep string) []byte {
 
 func rawPatientEventWithOccurredAt(patientID, birthDate, sex, cep, occurredAt string) []byte {
 	data, _ := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-anon-" + patientID,
-			"occurredAt":    occurredAt,
-			"schemaVersion": "1.0",
-		},
-		"patientId": patientID,
-		"personId":  "person-" + patientID,
-		"birthDate": birthDate,
-		"sex":       sex,
-		"cep":       cep,
+		"id":         "evt-anon-" + patientID,
+		"occurredAt": occurredAt,
+		"actorId":    "actor-001",
+		"patientId":  patientID,
+		"personId":   "person-" + patientID,
+		"birthDate":  birthDate,
+		"sex":        sex,
+		"cep":        cep,
 	})
 	return data
 }
 
 func rawPatientEventWithIncome(patientID, birthDate, sex, cep string, incomeCents int64) []byte {
 	data, _ := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"eventId":       "evt-income-" + patientID,
-			"occurredAt":    "2025-06-15T10:00:00Z",
-			"schemaVersion": "1.0",
-		},
-		"patientId":       patientID,
-		"personId":        "person-" + patientID,
-		"birthDate":       birthDate,
-		"sex":             sex,
-		"cep":             cep,
+		"id":               "evt-income-" + patientID,
+		"occurredAt":       "2025-06-15T10:00:00Z",
+		"actorId":          "actor-001",
+		"patientId":        patientID,
+		"personId":         "person-" + patientID,
+		"birthDate":        birthDate,
+		"sex":              sex,
+		"cep":              cep,
 		"totalIncomeCents": incomeCents,
 	})
 	return data

@@ -259,21 +259,20 @@ func (p *pipeline) materialize(ctx context.Context, record AnonymizedRecord) err
 	}
 }
 
-// extractEventID attempts to pull metadata.eventId from raw JSON bytes.
+// extractEventID attempts to pull the event "id" from raw JSON bytes.
+// Swift events have "id" as a top-level UUID field (no metadata wrapper).
 // Returns the eventID and true if found, or empty string and false on failure.
 func extractEventID(data []byte) (string, bool) {
 	var envelope struct {
-		Metadata struct {
-			EventID string `json:"eventId"`
-		} `json:"metadata"`
+		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(data, &envelope); err != nil {
 		return "", false
 	}
-	if envelope.Metadata.EventID == "" {
+	if envelope.ID == "" {
 		return "", false
 	}
-	return envelope.Metadata.EventID, true
+	return envelope.ID, true
 }
 
 // sanitizeForDLQ strips PII from raw event data before sending to the dead-letter
