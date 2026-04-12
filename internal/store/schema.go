@@ -171,5 +171,33 @@ CREATE TABLE IF NOT EXISTS event_dlq (
     retry_count INT NOT NULL DEFAULT 0
 );`,
 		},
+		{
+			Version: 4,
+			Name:    "add unique constraints for fact table upserts",
+			SQL: `
+ALTER TABLE fact_diagnosis
+    ADD CONSTRAINT uq_fact_diagnosis_composite
+    UNIQUE (period_id, diagnosis_id, geography_id, age_band_id, sex_id);
+
+ALTER TABLE fact_appointment
+    ADD CONSTRAINT uq_fact_appointment_composite
+    UNIQUE (period_id, geography_id, appointment_type);
+
+ALTER TABLE fact_referral
+    ADD CONSTRAINT uq_fact_referral_composite
+    UNIQUE (period_id, geography_id, destination_id);
+
+ALTER TABLE fact_violation
+    ADD CONSTRAINT uq_fact_violation_composite
+    UNIQUE (period_id, geography_id, violation_type_id);
+
+ALTER TABLE fact_benefit
+    ADD CONSTRAINT uq_fact_benefit_composite
+    UNIQUE (period_id, geography_id, benefit_type_id);
+
+ALTER TABLE fact_family_composition
+    ADD CONSTRAINT uq_fact_family_composition_composite
+    UNIQUE (period_id, geography_id);`,
+		},
 	}
 }
