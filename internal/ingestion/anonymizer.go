@@ -3,6 +3,7 @@ package ingestion
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -93,8 +94,9 @@ func (a *Anonymizer) anonymizePatientCreated(data []byte) (AnonymizedRecord, err
 	if evt.BirthDate != "" {
 		birthDate, parseErr := time.Parse("2006-01-02", evt.BirthDate)
 		if parseErr == nil {
-			ageRef := time.Date(occurredAt.Year()-1, 12, 31, 23, 59, 59, 0, time.UTC)
-			if ageBand, ageErr := domain.GeneralizeAge(birthDate, ageRef); ageErr == nil {
+			// Use occurredAt as age reference (not year-1) so that newborns
+			// registered in their birth year get a valid age band (0-4).
+			if ageBand, ageErr := domain.GeneralizeAge(birthDate, occurredAt); ageErr == nil {
 				snapshot.AgeBand = ageBand
 			}
 		}
@@ -103,8 +105,14 @@ func (a *Anonymizer) anonymizePatientCreated(data []byte) (AnonymizedRecord, err
 	snapshot.Sex = mapSex(evt.Sex) // defaults to SexUnknown for empty string
 
 	if evt.CEP != "" {
-		if geo, geoErr := a.geo.FindByCEP(evt.CEP); geoErr == nil {
+		geo, geoErr := a.geo.FindByCEP(evt.CEP)
+		if geoErr == nil {
 			snapshot.Geography = geo
+		} else if !errors.Is(geoErr, domain.ErrCEPNotFound) {
+			// CEP format errors (wrong length, non-digit) are real data issues —
+			// not found is graceful (unmapped CEP), but format errors should not
+			// silently produce empty geography.
+			return AnonymizedRecord{}, fmt.Errorf("%w: CEP validation: %v", ErrAnonymizationFailed, geoErr)
 		}
 	}
 

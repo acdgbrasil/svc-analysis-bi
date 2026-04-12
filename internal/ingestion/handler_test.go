@@ -201,6 +201,7 @@ func TestHandlePatientCreated_MissingRequiredFields(t *testing.T) {
 				"occurredAt": "2025-06-15T10:00:00Z",
 				"actorId":    "actor-001",
 				"patientId":  "pat-001",
+				"personId":   "person-001",
 				"birthDate":  "1990-01-01",
 				"sex":        "MALE",
 				"cep":        "13083970",

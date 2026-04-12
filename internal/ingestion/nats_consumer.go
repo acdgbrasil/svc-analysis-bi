@@ -52,6 +52,10 @@ func (c *natsConsumer) Subscribe(ctx context.Context, out chan<- RawMessage) err
 
 	// Subscribe with durable consumer. Matches subjects published by
 	// svc-social-care's NATSEventPublisher: "social-care.events.<EventType>".
+	//
+	// NOTE: If the durable consumer already exists with a different filter
+	// subject, JetStream will reject the subscription. In that case, delete
+	// the old consumer first: `nats consumer rm SOCIAL_CARE_EVENTS analysis-bi`
 	sub, err := js.PullSubscribe(
 		"social-care.events.*",
 		c.cfg.ConsumerName,
