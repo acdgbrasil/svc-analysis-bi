@@ -11,7 +11,7 @@ import (
 
 // Sentinel errors for indicator queries.
 var (
-	ErrIndicatorQueryFailed = errors.New("store: indicator query failed")
+	ErrIndicatorQueryFailed   = errors.New("store: indicator query failed")
 	ErrInvalidIndicatorParams = errors.New("store: invalid indicator params")
 )
 
@@ -106,7 +106,8 @@ func periodLabel(yearMonth string, g domain.TimeGranularity) string {
 }
 
 // periodGroupExpr returns the SQL expression used for grouping time
-// at the requested granularity.
+// at the requested granularity. The expression references the dim_period
+// table aliased as "p".
 func periodGroupExpr(g domain.TimeGranularity) string {
 	switch g {
 	case domain.GranularityQuarterly:
@@ -115,6 +116,20 @@ func periodGroupExpr(g domain.TimeGranularity) string {
 		return "CAST(p.year AS TEXT)"
 	default:
 		return "p.year_month"
+	}
+}
+
+// combinedPeriodGroupExpr returns the SQL expression used for grouping time
+// in queries over a subquery/CTE where dim_period columns are exposed as
+// bare column names (year_month, year, quarter) without a table alias.
+func combinedPeriodGroupExpr(g domain.TimeGranularity) string {
+	switch g {
+	case domain.GranularityQuarterly:
+		return "year || '-Q' || quarter"
+	case domain.GranularityYearly:
+		return "CAST(year AS TEXT)"
+	default:
+		return "year_month"
 	}
 }
 
@@ -200,7 +215,7 @@ func (s *IndicatorStore) QueryDemographics(ctx context.Context, params Indicator
 func (s *IndicatorStore) countSuppressedDemographics(ctx context.Context, startYM, endYM string, params IndicatorParams) (int, error) {
 	periodExpr := periodGroupExpr(params.Granularity)
 
-	query := fmt.Sprintf(`
+	query := `
 		SELECT COUNT(*) FROM (
 			SELECT 1
 			FROM fact_patient_snapshot fps
@@ -209,12 +224,24 @@ func (s *IndicatorStore) countSuppressedDemographics(ctx context.Context, startY
 			JOIN dim_geography g ON fps.geography_id = g.id
 			JOIN dim_period p ON fps.period_id = p.id
 			WHERE p.year_month BETWEEN $1 AND $2
+	`
+
+	args := []any{startYM, endYM}
+	argIdx := 3
+
+	if params.Mesoregion != "" {
+		query += fmt.Sprintf(" AND g.mesoregion_name = $%d", argIdx)
+		args = append(args, params.Mesoregion)
+		argIdx++
+	}
+
+	query += fmt.Sprintf(`
 			GROUP BY ab.band_label, s.label, g.mesoregion_name, %s
 			HAVING COUNT(*) < %d
 		) suppressed
 	`, periodExpr, domain.KThreshold)
 
-	args := []any{startYM, endYM}
+	_ = argIdx // suppress unused lint
 
 	var count int
 	if err := s.pool.QueryRow(ctx, query, args...).Scan(&count); err != nil {
@@ -247,10 +274,15 @@ func (s *IndicatorStore) QueryEpidemiological(ctx context.Context, params Indica
 	`, periodExpr, periodExpr, domain.KThreshold)
 
 	args := []any{startYM, endYM}
+	argIdx := 3
 
 	if params.Top > 0 {
-		query += fmt.Sprintf(" LIMIT %d", params.Top)
+		query += fmt.Sprintf(" LIMIT $%d", argIdx)
+		args = append(args, params.Top)
+		argIdx++
 	}
+
+	_ = argIdx // suppress unused lint
 
 	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
@@ -400,11 +432,13 @@ func (s *IndicatorStore) QueryProtection(ctx context.Context, params IndicatorPa
 		return nil, err
 	}
 
-	periodExpr := periodGroupExpr(params.Granularity)
+	combinedExpr := combinedPeriodGroupExpr(params.Granularity)
 	startYM := params.PeriodStart.YearMonth()
 	endYM := params.PeriodEnd.YearMonth()
 
-	// Combine referrals and violations via UNION ALL.
+	// Combine referrals and violations via UNION ALL. The subquery exposes
+	// dim_period columns as bare names so the outer query must use
+	// combinedPeriodGroupExpr (without "p." prefix).
 	query := fmt.Sprintf(`
 		SELECT category, label, %s AS period_label, SUM(cnt) AS total FROM (
 			SELECT 'referral' AS category, rd.label, p.year_month, p.year, p.quarter,
@@ -424,7 +458,7 @@ func (s *IndicatorStore) QueryProtection(ctx context.Context, params IndicatorPa
 		GROUP BY category, label, %s
 		HAVING SUM(cnt) >= %d
 		ORDER BY period_label, total DESC
-	`, periodExpr, periodExpr, domain.KThreshold)
+	`, combinedExpr, combinedExpr, domain.KThreshold)
 
 	args := []any{startYM, endYM}
 
@@ -537,20 +571,34 @@ func (s *IndicatorStore) QueryCare(ctx context.Context, params IndicatorParams) 
 func (s *IndicatorStore) countSuppressedCare(ctx context.Context, startYM, endYM string, params IndicatorParams) (int, error) {
 	periodExpr := periodGroupExpr(params.Granularity)
 
-	query := fmt.Sprintf(`
+	query := `
 		SELECT COUNT(*) FROM (
 			SELECT 1
 			FROM fact_appointment fa
 			JOIN dim_geography g ON fa.geography_id = g.id
 			JOIN dim_period p ON fa.period_id = p.id
 			WHERE p.year_month BETWEEN $1 AND $2
+	`
+
+	args := []any{startYM, endYM}
+	argIdx := 3
+
+	if params.Mesoregion != "" {
+		query += fmt.Sprintf(" AND g.mesoregion_name = $%d", argIdx)
+		args = append(args, params.Mesoregion)
+		argIdx++
+	}
+
+	query += fmt.Sprintf(`
 			GROUP BY fa.appointment_type, g.mesoregion_name, %s
 			HAVING SUM(fa.count) < %d
 		) suppressed
 	`, periodExpr, domain.KThreshold)
 
+	_ = argIdx // suppress unused lint
+
 	var count int
-	if err := s.pool.QueryRow(ctx, query, startYM, endYM).Scan(&count); err != nil {
+	if err := s.pool.QueryRow(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("%w: suppressed count: %v", ErrIndicatorQueryFailed, err)
 	}
 	return count, nil

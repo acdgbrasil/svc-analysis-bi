@@ -154,7 +154,9 @@ func (s *PgFactStore) IncrementDiagnosis(ctx context.Context, record ingestion.A
 	_, err = s.pool.Exec(ctx, `
 		INSERT INTO fact_diagnosis (period_id, diagnosis_id, geography_id, age_band_id, sex_id, new_cases, total_cases)
 		VALUES ($1, $2, $3, $4, $5, $6, $6)
-		ON CONFLICT DO NOTHING
+		ON CONFLICT (period_id, diagnosis_id, geography_id, age_band_id, sex_id) DO UPDATE SET
+			new_cases   = fact_diagnosis.new_cases + EXCLUDED.new_cases,
+			total_cases = fact_diagnosis.total_cases + EXCLUDED.total_cases
 	`, periodID, diagID, geoID, ageBandID, sexID, p.NewCases)
 	if err != nil {
 		return fmt.Errorf("%w: fact_diagnosis: %v", ErrFactInsertFailed, err)
@@ -183,6 +185,8 @@ func (s *PgFactStore) IncrementAppointment(ctx context.Context, record ingestion
 	_, err = s.pool.Exec(ctx, `
 		INSERT INTO fact_appointment (period_id, geography_id, appointment_type, count)
 		VALUES ($1, $2, $3, 1)
+		ON CONFLICT (period_id, geography_id, appointment_type) DO UPDATE SET
+			count = fact_appointment.count + 1
 	`, periodID, geoID, p.AppointmentType)
 	if err != nil {
 		return fmt.Errorf("%w: fact_appointment: %v", ErrFactInsertFailed, err)
@@ -216,6 +220,8 @@ func (s *PgFactStore) IncrementReferral(ctx context.Context, record ingestion.An
 	_, err = s.pool.Exec(ctx, `
 		INSERT INTO fact_referral (period_id, geography_id, destination_id, count)
 		VALUES ($1, $2, $3, 1)
+		ON CONFLICT (period_id, geography_id, destination_id) DO UPDATE SET
+			count = fact_referral.count + 1
 	`, periodID, geoID, destID)
 	if err != nil {
 		return fmt.Errorf("%w: fact_referral: %v", ErrFactInsertFailed, err)
@@ -249,6 +255,8 @@ func (s *PgFactStore) IncrementViolation(ctx context.Context, record ingestion.A
 	_, err = s.pool.Exec(ctx, `
 		INSERT INTO fact_violation (period_id, geography_id, violation_type_id, count)
 		VALUES ($1, $2, $3, 1)
+		ON CONFLICT (period_id, geography_id, violation_type_id) DO UPDATE SET
+			count = fact_violation.count + 1
 	`, periodID, geoID, vtID)
 	if err != nil {
 		return fmt.Errorf("%w: fact_violation: %v", ErrFactInsertFailed, err)
@@ -282,6 +290,9 @@ func (s *PgFactStore) IncrementBenefit(ctx context.Context, record ingestion.Ano
 	_, err = s.pool.Exec(ctx, `
 		INSERT INTO fact_benefit (period_id, geography_id, benefit_type_id, beneficiary_count, total_amount)
 		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (period_id, geography_id, benefit_type_id) DO UPDATE SET
+			beneficiary_count = fact_benefit.beneficiary_count + EXCLUDED.beneficiary_count,
+			total_amount      = fact_benefit.total_amount + EXCLUDED.total_amount
 	`, periodID, geoID, btID, p.BeneficiaryDelta, p.Amount)
 	if err != nil {
 		return fmt.Errorf("%w: fact_benefit: %v", ErrFactInsertFailed, err)
@@ -335,7 +346,14 @@ func (s *PgFactStore) UpsertFamilyComposition(ctx context.Context, record ingest
 			period_id, geography_id, avg_family_size,
 			total_families, families_with_elderly, families_with_children
 		) VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT DO NOTHING
+		ON CONFLICT (period_id, geography_id) DO UPDATE SET
+			total_families         = fact_family_composition.total_families + EXCLUDED.total_families,
+			families_with_elderly  = fact_family_composition.families_with_elderly + EXCLUDED.families_with_elderly,
+			families_with_children = fact_family_composition.families_with_children + EXCLUDED.families_with_children,
+			avg_family_size        = (
+				(fact_family_composition.avg_family_size * fact_family_composition.total_families)
+				+ EXCLUDED.avg_family_size
+			) / GREATEST(fact_family_composition.total_families + EXCLUDED.total_families, 1)
 	`, periodID, geoID, float64(p.FamilySizeDelta), familyDelta, elderlyDelta, childrenDelta)
 	if err != nil {
 		return fmt.Errorf("%w: fact_family_composition: %v", ErrFactUpsertFailed, err)
