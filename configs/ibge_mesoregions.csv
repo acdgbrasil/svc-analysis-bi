@@ -1,0 +1,23 @@
+cep_prefix,mesoregion_code,mesoregion_name,microregion_code,microregion_name,state_code,state_name,region
+01000,3550,Metropolitana de Sao Paulo,35051,Sao Paulo,35,Sao Paulo,Sudeste
+02000,3550,Metropolitana de Sao Paulo,35051,Sao Paulo,35,Sao Paulo,Sudeste
+03000,3550,Metropolitana de Sao Paulo,35051,Sao Paulo,35,Sao Paulo,Sudeste
+04000,3550,Metropolitana de Sao Paulo,35051,Sao Paulo,35,Sao Paulo,Sudeste
+05000,3550,Metropolitana de Sao Paulo,35051,Sao Paulo,35,Sao Paulo,Sudeste
+06000,3550,Metropolitana de Sao Paulo,35052,Osasco,35,Sao Paulo,Sudeste
+07000,3550,Metropolitana de Sao Paulo,35053,Guarulhos,35,Sao Paulo,Sudeste
+08000,3550,Metropolitana de Sao Paulo,35054,Itaquaquecetuba,35,Sao Paulo,Sudeste
+09000,3550,Metropolitana de Sao Paulo,35055,Santo Andre,35,Sao Paulo,Sudeste
+10000,3301,Metropolitana do Rio de Janeiro,33001,Rio de Janeiro,33,Rio de Janeiro,Sudeste
+20000,3301,Metropolitana do Rio de Janeiro,33001,Rio de Janeiro,33,Rio de Janeiro,Sudeste
+21000,3301,Metropolitana do Rio de Janeiro,33002,Niteroi,33,Rio de Janeiro,Sudeste
+22000,3301,Metropolitana do Rio de Janeiro,33001,Rio de Janeiro,33,Rio de Janeiro,Sudeste
+23000,3301,Metropolitana do Rio de Janeiro,33003,Nova Iguacu,33,Rio de Janeiro,Sudeste
+24000,3301,Metropolitana do Rio de Janeiro,33002,Niteroi,33,Rio de Janeiro,Sudeste
+30000,3107,Metropolitana de Belo Horizonte,31030,Belo Horizonte,31,Minas Gerais,Sudeste
+40000,2904,Metropolitana de Salvador,29021,Salvador,29,Bahia,Nordeste
+50000,5004,Metropolitana de Campo Grande,50001,Campo Grande,50,Mato Grosso do Sul,Centro-Oeste
+60000,2303,Metropolitana de Fortaleza,23016,Fortaleza,23,Ceara,Nordeste
+70000,5300,Distrito Federal,53001,Brasilia,53,Distrito Federal,Centro-Oeste
+80000,4106,Metropolitana de Curitiba,41037,Curitiba,41,Parana,Sul
+90000,4314,Metropolitana de Porto Alegre,43026,Porto Alegre,43,Rio Grande do Sul,Sul
