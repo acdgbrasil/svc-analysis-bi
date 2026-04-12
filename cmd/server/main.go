@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -145,9 +146,10 @@ func run() int {
 
 	// Wire JWT validator
 	var jwtValidator middleware.JWTValidator
-	if cfg.Auth.JWKSUrl != "" {
-		jwtValidator = middleware.NewJWKSValidator(cfg.Auth.JWKSUrl)
-		logger.Info("JWT validation enabled", "jwks_url", cfg.Auth.JWKSUrl)
+	jwksURL := strings.TrimSpace(cfg.Auth.JWKSUrl)
+	if jwksURL != "" {
+		jwtValidator = middleware.NewJWKSValidator(jwksURL)
+		logger.Info("JWT validation enabled", "jwks_url", jwksURL)
 	} else {
 		logger.Warn("JWKS_URL not configured, JWT validation disabled")
 	}

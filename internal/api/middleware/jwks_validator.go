@@ -190,6 +190,7 @@ func (v *JWKSValidator) Validate(ctx context.Context, tokenString string) (*Clai
 }
 
 // getKey looks up an RSA public key by kid, refreshing the cache if needed.
+// Security: does NOT fall back to stale keys on refresh failure (fail-closed).
 func (v *JWKSValidator) getKey(ctx context.Context, kid string) (*rsa.PublicKey, error) {
 	// Try cache first
 	v.mu.RLock()
@@ -201,12 +202,8 @@ func (v *JWKSValidator) getKey(ctx context.Context, kid string) (*rsa.PublicKey,
 		return key, nil
 	}
 
-	// Refresh keys from JWKS endpoint
+	// Refresh keys from JWKS endpoint (fail-closed: reject if refresh fails)
 	if err := v.refreshKeys(ctx); err != nil {
-		// If we have a stale cached key, use it rather than failing
-		if found {
-			return key, nil
-		}
 		return nil, err
 	}
 
