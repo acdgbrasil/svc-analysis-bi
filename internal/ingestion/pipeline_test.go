@@ -1,0 +1,437 @@
+package ingestion
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/acdgbrasil/svc-analysis-bi/internal/domain"
+)
+
+// ---------------------------------------------------------------------------
+// Test: Messages flow through consumer -> anonymize -> materialize
+// ---------------------------------------------------------------------------
+
+func TestPipeline_HappyPath_MessageFlowsThrough(t *testing.T) {
+	eventStore := newFakeEventStore()
+	factStore := newFakeFactStore()
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	patientCreatedPayload, _ := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"eventId":       "evt-pipeline-001",
+			"occurredAt":    "2025-06-15T10:00:00Z",
+			"schemaVersion": "1.0",
+		},
+		"patientId": "pat-uuid-pipeline",
+		"personId":  "person-uuid-pipeline",
+		"birthDate": "1990-03-15",
+		"sex":       "MALE",
+		"cep":       "13083970",
+	})
+
+	ackTrack := newAckTracker()
+
+	consumer := newFakeConsumer(RawMessage{
+		Subject: string(domain.EventPatientCreated),
+		Data:    patientCreatedPayload,
+		Ack:     ackTrack.ack,
+	})
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     1,
+		MaterializeWorkers:   1,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	err := pipeline.Run(ctx)
+	// Pipeline should return nil or ErrPipelineShutdown on context cancellation
+	if err != nil && !errors.Is(err, ErrPipelineShutdown) && !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("unexpected pipeline error: %v", err)
+	}
+
+	// Verify that the fact store received the materialized record
+	calls := factStore.getCalls()
+	if len(calls) == 0 {
+		t.Error("expected at least one fact store call after processing message")
+	}
+
+	// Verify ack was called
+	if ackTrack.ackCount() == 0 {
+		t.Error("expected Ack to be called after successful materialization")
+	}
+
+	// Verify event was marked as processed
+	if !eventStore.isMarkedProcessed("evt-pipeline-001") {
+		t.Error("expected event to be marked as processed")
+	}
+}
+
+func TestPipeline_HappyPath_MultipleMessages(t *testing.T) {
+	eventStore := newFakeEventStore()
+	factStore := newFakeFactStore()
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	makePatientEvent := func(eventID, patientID string) []byte {
+		data, _ := json.Marshal(map[string]any{
+			"metadata": map[string]any{
+				"eventId":       eventID,
+				"occurredAt":    "2025-06-15T10:00:00Z",
+				"schemaVersion": "1.0",
+			},
+			"patientId": patientID,
+			"personId":  "person-001",
+			"birthDate": "1990-01-01",
+			"sex":       "FEMALE",
+			"cep":       "01310100",
+		})
+		return data
+	}
+
+	ack1 := newAckTracker()
+	ack2 := newAckTracker()
+
+	consumer := newFakeConsumer(
+		RawMessage{
+			Subject: string(domain.EventPatientCreated),
+			Data:    makePatientEvent("evt-multi-001", "pat-001"),
+			Ack:     ack1.ack,
+		},
+		RawMessage{
+			Subject: string(domain.EventPatientCreated),
+			Data:    makePatientEvent("evt-multi-002", "pat-002"),
+			Ack:     ack2.ack,
+		},
+	)
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     1,
+		MaterializeWorkers:   1,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_ = pipeline.Run(ctx)
+
+	calls := factStore.getCalls()
+	if len(calls) < 2 {
+		t.Errorf("expected at least 2 fact store calls, got %d", len(calls))
+	}
+
+	if ack1.ackCount() == 0 {
+		t.Error("expected first message to be acked")
+	}
+	if ack2.ackCount() == 0 {
+		t.Error("expected second message to be acked")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: Unknown event type -> DLQ
+// ---------------------------------------------------------------------------
+
+func TestPipeline_UnknownEventType_SentToDLQ(t *testing.T) {
+	eventStore := newFakeEventStore()
+	factStore := newFakeFactStore()
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	ackTrack := newAckTracker()
+
+	unknownPayload := []byte(`{"metadata":{"eventId":"evt-unknown-001","occurredAt":"2025-06-15T10:00:00Z","schemaVersion":"1.0"}}`)
+
+	consumer := newFakeConsumer(RawMessage{
+		Subject: "social-care.unknown.event.type",
+		Data:    unknownPayload,
+		Ack:     ackTrack.ack,
+	})
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     1,
+		MaterializeWorkers:   1,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_ = pipeline.Run(ctx)
+
+	// Unknown events should be sent to DLQ
+	dlqEntries := eventStore.getDLQ()
+	if len(dlqEntries) == 0 {
+		t.Error("expected unknown event to be sent to DLQ")
+	}
+
+	// Fact store should NOT have been called for the unknown event
+	if len(factStore.getCalls()) != 0 {
+		t.Error("expected no fact store calls for unknown event type")
+	}
+
+	// Ack should still be called to prevent NATS redelivery
+	if ackTrack.ackCount() == 0 {
+		t.Error("expected Ack to be called after DLQ routing")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: Duplicate event (already processed) -> skipped and acked
+// ---------------------------------------------------------------------------
+
+func TestPipeline_DuplicateEvent_SkippedAndAcked(t *testing.T) {
+	eventStore := newFakeEventStore()
+	// Pre-mark the event as already processed
+	eventStore.markAsAlreadyProcessed("evt-dup-001")
+
+	factStore := newFakeFactStore()
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	payload, _ := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"eventId":       "evt-dup-001",
+			"occurredAt":    "2025-06-15T10:00:00Z",
+			"schemaVersion": "1.0",
+		},
+		"patientId": "pat-dup",
+		"personId":  "person-dup",
+		"birthDate": "1990-01-01",
+		"sex":       "MALE",
+		"cep":       "13083970",
+	})
+
+	ackTrack := newAckTracker()
+
+	consumer := newFakeConsumer(RawMessage{
+		Subject: string(domain.EventPatientCreated),
+		Data:    payload,
+		Ack:     ackTrack.ack,
+	})
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     1,
+		MaterializeWorkers:   1,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_ = pipeline.Run(ctx)
+
+	// Fact store should NOT have been called for duplicate event
+	calls := factStore.getCalls()
+	if len(calls) != 0 {
+		t.Errorf("expected 0 fact store calls for duplicate event, got %d", len(calls))
+	}
+
+	// Ack should still be called to consume the duplicate from NATS
+	if ackTrack.ackCount() == 0 {
+		t.Error("expected Ack to be called for duplicate event")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: Context cancellation -> graceful shutdown
+// ---------------------------------------------------------------------------
+
+func TestPipeline_ContextCancellation_GracefulShutdown(t *testing.T) {
+	eventStore := newFakeEventStore()
+	factStore := newFakeFactStore()
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	// Consumer that blocks until context is cancelled (no messages)
+	consumer := newFakeConsumer()
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     1,
+		MaterializeWorkers:   1,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan error, 1)
+	go func() {
+		done <- pipeline.Run(ctx)
+	}()
+
+	// Cancel after a short delay
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-done:
+		// Should return nil, context.Canceled, or ErrPipelineShutdown
+		if err != nil && !errors.Is(err, ErrPipelineShutdown) && !errors.Is(err, context.Canceled) {
+			t.Errorf("expected graceful shutdown error, got: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("pipeline did not shut down within 5 seconds")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: Ack called only after successful materialization
+// ---------------------------------------------------------------------------
+
+func TestPipeline_AckOnlyAfterMaterialization(t *testing.T) {
+	eventStore := newFakeEventStore()
+	// FactStore that always fails
+	factStore := newFakeFactStoreWithError(errors.New("materialization failure"))
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	payload, _ := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"eventId":       "evt-noack-001",
+			"occurredAt":    "2025-06-15T10:00:00Z",
+			"schemaVersion": "1.0",
+		},
+		"patientId": "pat-noack",
+		"personId":  "person-noack",
+		"birthDate": "1990-01-01",
+		"sex":       "MALE",
+		"cep":       "13083970",
+	})
+
+	ackTrack := newAckTracker()
+
+	consumer := newFakeConsumer(RawMessage{
+		Subject: string(domain.EventPatientCreated),
+		Data:    payload,
+		Ack:     ackTrack.ack,
+	})
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     1,
+		MaterializeWorkers:   1,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_ = pipeline.Run(ctx)
+
+	// Ack should NOT have been called because materialization failed
+	if ackTrack.ackCount() != 0 {
+		t.Error("Ack must NOT be called when materialization fails")
+	}
+
+	// Event should NOT be marked as processed
+	if eventStore.isMarkedProcessed("evt-noack-001") {
+		t.Error("event must NOT be marked as processed when materialization fails")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: Consumer connection error propagates
+// ---------------------------------------------------------------------------
+
+func TestPipeline_ConsumerConnectionError(t *testing.T) {
+	eventStore := newFakeEventStore()
+	factStore := newFakeFactStore()
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	consumer := newFakeConsumerWithError(ErrConsumerConnectionFailed)
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     1,
+		MaterializeWorkers:   1,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+
+	ctx := context.Background()
+	err := pipeline.Run(ctx)
+	if err == nil {
+		t.Fatal("expected error from consumer connection failure")
+	}
+	if !errors.Is(err, ErrConsumerConnectionFailed) {
+		t.Errorf("error = %v, want wrapping %v", err, ErrConsumerConnectionFailed)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: NewPipeline constructor
+// ---------------------------------------------------------------------------
+
+func TestNewPipeline_ReturnsNonNil(t *testing.T) {
+	eventStore := newFakeEventStore()
+	factStore := newFakeFactStore()
+	geoLookup := newFakeGeographyLookup()
+	salt := "test-salt"
+
+	registry := NewEventHandlerRegistry(geoLookup, salt)
+
+	consumer := newFakeConsumer()
+
+	cfg := PipelineConfig{
+		RawBufferSize:        10,
+		AnonymizedBufferSize: 10,
+		AnonymizeWorkers:     2,
+		MaterializeWorkers:   2,
+		Salt:                 salt,
+	}
+
+	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
+	if pipeline == nil {
+		t.Fatal("NewPipeline must return a non-nil Pipeline")
+	}
+}
+
+// Ensure fakeEventStore satisfies EventProcessingStore
+var _ EventProcessingStore = (*fakeEventStore)(nil)
