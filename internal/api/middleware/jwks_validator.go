@@ -26,6 +26,8 @@ var (
 	errJWKSFetchFailed     = errors.New("failed to fetch JWKS")
 	errInvalidJWKSResponse = errors.New("invalid JWKS response")
 	errInvalidRSAKey       = errors.New("invalid RSA public key in JWKS")
+	errInvalidIssuer       = errors.New("token issuer does not match expected issuer")
+	errInvalidAudience     = errors.New("token audience does not match expected audience")
 )
 
 // jwksResponse represents the JSON Web Key Set response from the OIDC provider.
@@ -78,13 +80,15 @@ type roleAccess struct {
 // JWKSValidator validates JWT tokens against a JWKS endpoint.
 // It caches the key set and refreshes periodically.
 type JWKSValidator struct {
-	jwksURL    string
-	httpClient *http.Client
-	mu         sync.RWMutex
-	keys       map[string]*rsa.PublicKey
-	lastFetch  time.Time
-	cacheTTL   time.Duration
-	nowFunc    func() time.Time // for testing
+	jwksURL          string
+	httpClient       *http.Client
+	mu               sync.RWMutex
+	keys             map[string]*rsa.PublicKey
+	lastFetch        time.Time
+	cacheTTL         time.Duration
+	nowFunc          func() time.Time // for testing
+	expectedIssuer   string
+	expectedAudience string
 }
 
 // JWKSValidatorOption configures optional JWKSValidator behavior.
@@ -101,6 +105,23 @@ func WithHTTPClient(client *http.Client) JWKSValidatorOption {
 func WithCacheTTL(ttl time.Duration) JWKSValidatorOption {
 	return func(v *JWKSValidator) {
 		v.cacheTTL = ttl
+	}
+}
+
+// WithIssuer sets the expected issuer (iss) claim. Tokens with a different
+// issuer will be rejected. If not set, issuer validation is skipped.
+func WithIssuer(iss string) JWKSValidatorOption {
+	return func(v *JWKSValidator) {
+		v.expectedIssuer = iss
+	}
+}
+
+// WithAudience sets the expected audience (aud) claim. Tokens that do not
+// contain this audience will be rejected. If not set, audience validation
+// is skipped.
+func WithAudience(aud string) JWKSValidatorOption {
+	return func(v *JWKSValidator) {
+		v.expectedAudience = aud
 	}
 }
 
@@ -178,6 +199,16 @@ func (v *JWKSValidator) Validate(ctx context.Context, tokenString string) (*Clai
 	now := v.nowFunc()
 	if payload.Exp > 0 && now.Unix() > payload.Exp {
 		return nil, errTokenExpired
+	}
+
+	// Validate issuer if configured
+	if v.expectedIssuer != "" && payload.Iss != v.expectedIssuer {
+		return nil, errInvalidIssuer
+	}
+
+	// Validate audience if configured
+	if v.expectedAudience != "" && !audienceContains(payload.Aud, v.expectedAudience) {
+		return nil, errInvalidAudience
 	}
 
 	// Extract roles from various claim formats
@@ -354,4 +385,26 @@ func extractRoles(p jwtPayload) []string {
 	}
 
 	return nil
+}
+
+// audienceContains checks whether the JWT aud claim (which can be a string
+// or an array of strings) contains the expected audience value.
+func audienceContains(aud any, expected string) bool {
+	switch v := aud.(type) {
+	case string:
+		return v == expected
+	case []any:
+		for _, a := range v {
+			if s, ok := a.(string); ok && s == expected {
+				return true
+			}
+		}
+	case []string:
+		for _, a := range v {
+			if a == expected {
+				return true
+			}
+		}
+	}
+	return false
 }

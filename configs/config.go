@@ -39,7 +39,10 @@ type NATSConfig struct {
 }
 
 type AuthConfig struct {
-	JWKSUrl string
+	JWKSUrl          string
+	AuthRequired     bool
+	ExpectedIssuer   string
+	ExpectedAudience string
 }
 
 type Config struct {
@@ -107,7 +110,10 @@ func Load() (Config, error) {
 			Consumer: envStr("NATS_CONSUMER", "analysis-bi"),
 		},
 		Auth: AuthConfig{
-			JWKSUrl: os.Getenv("JWKS_URL"),
+			JWKSUrl:          os.Getenv("JWKS_URL"),
+			AuthRequired:     envBool("AUTH_REQUIRED", true),
+			ExpectedIssuer:   os.Getenv("AUTH_ISSUER"),
+			ExpectedAudience: os.Getenv("AUTH_AUDIENCE"),
 		},
 		PatientHashSalt: salt,
 		LogLevel:        envStr("LOG_LEVEL", "info"),
@@ -157,6 +163,18 @@ func envInt(key string, fallback int) (int, error) {
 		return fallback, nil
 	}
 	return strconv.Atoi(v)
+}
+
+func envBool(key string, fallback bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return fallback
+	}
+	return b
 }
 
 func envDuration(key string, fallback time.Duration) (time.Duration, error) {

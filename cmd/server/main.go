@@ -147,11 +147,22 @@ func run() int {
 	// Wire JWT validator
 	var jwtValidator middleware.JWTValidator
 	jwksURL := strings.TrimSpace(cfg.Auth.JWKSUrl)
+	if cfg.Auth.AuthRequired && jwksURL == "" {
+		logger.Error("AUTH_REQUIRED is true but JWKS_URL is not configured — refusing to start without authentication")
+		return 1
+	}
 	if jwksURL != "" {
-		jwtValidator = middleware.NewJWKSValidator(jwksURL)
+		var jwksOpts []middleware.JWKSValidatorOption
+		if iss := strings.TrimSpace(cfg.Auth.ExpectedIssuer); iss != "" {
+			jwksOpts = append(jwksOpts, middleware.WithIssuer(iss))
+		}
+		if aud := strings.TrimSpace(cfg.Auth.ExpectedAudience); aud != "" {
+			jwksOpts = append(jwksOpts, middleware.WithAudience(aud))
+		}
+		jwtValidator = middleware.NewJWKSValidator(jwksURL, jwksOpts...)
 		logger.Info("JWT validation enabled", "jwks_url", jwksURL)
 	} else {
-		logger.Warn("JWKS_URL not configured, JWT validation disabled")
+		logger.Warn("JWKS_URL not configured, running in dev mode without authentication")
 	}
 
 	// Wire HTTP router

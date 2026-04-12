@@ -64,7 +64,7 @@ func newTestRouter(t *testing.T) http.Handler {
 		DB:   &stubDB{},
 		NATS: &stubNATS{connected: true},
 		JWTValidator: &stubJWT{
-			claims: &middleware.Claims{Subject: "test-user", Roles: []string{"analyst"}},
+			claims: &middleware.Claims{Subject: "test-user", Roles: []string{"analyst", "exporter"}},
 		},
 		Indicators: &stubIndicators{
 			result: &store.IndicatorResult{Rows: []store.IndicatorRow{}, Suppressed: 0},
@@ -78,7 +78,7 @@ func newTestRouterNoIndicators(t *testing.T) http.Handler {
 		DB:   &stubDB{},
 		NATS: &stubNATS{connected: true},
 		JWTValidator: &stubJWT{
-			claims: &middleware.Claims{Subject: "test-user", Roles: []string{"analyst"}},
+			claims: &middleware.Claims{Subject: "test-user", Roles: []string{"analyst", "exporter"}},
 		},
 	})
 }
