@@ -424,6 +424,149 @@ func TestJWKSValidator_NoRoles(t *testing.T) {
 	}
 }
 
+func TestJWKSValidator_WrongIssuer(t *testing.T) {
+	key := generateTestKey(t, "iss-key")
+	jwksSrv := serveJWKS(t, key)
+
+	now := time.Now()
+	validator := NewJWKSValidator(jwksSrv.URL,
+		withNowFunc(func() time.Time { return now }),
+		WithIssuer("https://auth.expected.com"),
+	)
+
+	token := signJWT(t, key, nil, map[string]any{
+		"sub": "user-wrong-iss",
+		"exp": now.Add(1 * time.Hour).Unix(),
+		"iss": "https://auth.evil.com",
+	})
+
+	_, err := validator.Validate(context.Background(), token)
+	if err != errInvalidIssuer {
+		t.Errorf("error = %v, want errInvalidIssuer", err)
+	}
+}
+
+func TestJWKSValidator_WrongAudience(t *testing.T) {
+	key := generateTestKey(t, "aud-key")
+	jwksSrv := serveJWKS(t, key)
+
+	now := time.Now()
+	validator := NewJWKSValidator(jwksSrv.URL,
+		withNowFunc(func() time.Time { return now }),
+		WithAudience("my-api"),
+	)
+
+	token := signJWT(t, key, nil, map[string]any{
+		"sub": "user-wrong-aud",
+		"exp": now.Add(1 * time.Hour).Unix(),
+		"aud": "other-api",
+	})
+
+	_, err := validator.Validate(context.Background(), token)
+	if err != errInvalidAudience {
+		t.Errorf("error = %v, want errInvalidAudience", err)
+	}
+}
+
+func TestJWKSValidator_WrongAudienceArray(t *testing.T) {
+	key := generateTestKey(t, "aud-arr-key")
+	jwksSrv := serveJWKS(t, key)
+
+	now := time.Now()
+	validator := NewJWKSValidator(jwksSrv.URL,
+		withNowFunc(func() time.Time { return now }),
+		WithAudience("my-api"),
+	)
+
+	token := signJWT(t, key, nil, map[string]any{
+		"sub": "user-wrong-aud-arr",
+		"exp": now.Add(1 * time.Hour).Unix(),
+		"aud": []string{"other-api", "another-api"},
+	})
+
+	_, err := validator.Validate(context.Background(), token)
+	if err != errInvalidAudience {
+		t.Errorf("error = %v, want errInvalidAudience", err)
+	}
+}
+
+func TestJWKSValidator_CorrectIssuerAndAudience(t *testing.T) {
+	key := generateTestKey(t, "issaud-key")
+	jwksSrv := serveJWKS(t, key)
+
+	now := time.Now()
+	validator := NewJWKSValidator(jwksSrv.URL,
+		withNowFunc(func() time.Time { return now }),
+		WithIssuer("https://auth.acdgbrasil.com.br"),
+		WithAudience("analysis-bi"),
+	)
+
+	token := signJWT(t, key, nil, map[string]any{
+		"sub":   "user-correct",
+		"exp":   now.Add(1 * time.Hour).Unix(),
+		"iss":   "https://auth.acdgbrasil.com.br",
+		"aud":   []string{"analysis-bi", "other-service"},
+		"roles": []string{"analyst"},
+	})
+
+	claims, err := validator.Validate(context.Background(), token)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if claims.Subject != "user-correct" {
+		t.Errorf("subject = %q, want %q", claims.Subject, "user-correct")
+	}
+}
+
+func TestJWKSValidator_AudienceAsString(t *testing.T) {
+	key := generateTestKey(t, "aud-str-key")
+	jwksSrv := serveJWKS(t, key)
+
+	now := time.Now()
+	validator := NewJWKSValidator(jwksSrv.URL,
+		withNowFunc(func() time.Time { return now }),
+		WithAudience("analysis-bi"),
+	)
+
+	token := signJWT(t, key, nil, map[string]any{
+		"sub": "user-aud-str",
+		"exp": now.Add(1 * time.Hour).Unix(),
+		"aud": "analysis-bi",
+	})
+
+	claims, err := validator.Validate(context.Background(), token)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if claims.Subject != "user-aud-str" {
+		t.Errorf("subject = %q, want %q", claims.Subject, "user-aud-str")
+	}
+}
+
+func TestJWKSValidator_NoIssuerConfigured(t *testing.T) {
+	key := generateTestKey(t, "noiss-key")
+	jwksSrv := serveJWKS(t, key)
+
+	now := time.Now()
+	// No WithIssuer — issuer validation skipped
+	validator := NewJWKSValidator(jwksSrv.URL,
+		withNowFunc(func() time.Time { return now }),
+	)
+
+	token := signJWT(t, key, nil, map[string]any{
+		"sub": "user-anyiss",
+		"exp": now.Add(1 * time.Hour).Unix(),
+		"iss": "https://any-issuer.com",
+	})
+
+	_, err := validator.Validate(context.Background(), token)
+	if err != nil {
+		t.Fatalf("unexpected error when issuer not configured: %v", err)
+	}
+}
+
 func TestDecodeJWTHeader(t *testing.T) {
 	tests := []struct {
 		name    string

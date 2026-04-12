@@ -334,6 +334,88 @@ func TestValidate_InvalidMaxConns(t *testing.T) {
 // DSN() tests
 // ---------------------------------------------------------------------------
 
+func TestLoad_AuthRequiredDefaultTrue(t *testing.T) {
+	t.Setenv("PATIENT_HASH_SALT", "salt")
+	t.Setenv("AUTH_REQUIRED", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+
+	if !cfg.Auth.AuthRequired {
+		t.Error("Auth.AuthRequired should default to true")
+	}
+}
+
+func TestValidate_AuthRequiredWithoutJWKS_Fails(t *testing.T) {
+	cfg := Config{
+		PatientHashSalt: "salt",
+		Server:          ServerConfig{Port: 8080},
+		Database:        DatabaseConfig{User: "u", Password: "p", MaxConns: 5},
+		Auth:            AuthConfig{AuthRequired: true, JWKSUrl: ""},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("Validate() should fail when AUTH_REQUIRED=true and JWKS_URL is empty")
+	}
+	if err != ErrMissingJWKS {
+		t.Errorf("Validate() error = %v, want %v", err, ErrMissingJWKS)
+	}
+}
+
+func TestValidate_AuthRequiredWithJWKS_Passes(t *testing.T) {
+	cfg := Config{
+		PatientHashSalt: "salt",
+		Server:          ServerConfig{Port: 8080},
+		Database:        DatabaseConfig{User: "u", Password: "p", MaxConns: 5},
+		Auth:            AuthConfig{AuthRequired: true, JWKSUrl: "https://auth.example.com/keys"},
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() unexpected error: %v", err)
+	}
+}
+
+func TestLoad_AuthRequiredFalseWithNoJWKS(t *testing.T) {
+	t.Setenv("PATIENT_HASH_SALT", "salt")
+	t.Setenv("AUTH_REQUIRED", "false")
+	t.Setenv("JWKS_URL", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+
+	if cfg.Auth.AuthRequired {
+		t.Error("Auth.AuthRequired should be false when AUTH_REQUIRED=false")
+	}
+	if cfg.Auth.JWKSUrl != "" {
+		t.Errorf("Auth.JWKSUrl = %q, want empty", cfg.Auth.JWKSUrl)
+	}
+}
+
+func TestLoad_AuthIssuerAndAudience(t *testing.T) {
+	t.Setenv("PATIENT_HASH_SALT", "salt")
+	t.Setenv("AUTH_ISSUER", "https://auth.example.com")
+	t.Setenv("AUTH_AUDIENCE", "my-api")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+
+	if cfg.Auth.ExpectedIssuer != "https://auth.example.com" {
+		t.Errorf("Auth.ExpectedIssuer = %q, want %q", cfg.Auth.ExpectedIssuer, "https://auth.example.com")
+	}
+	if cfg.Auth.ExpectedAudience != "my-api" {
+		t.Errorf("Auth.ExpectedAudience = %q, want %q", cfg.Auth.ExpectedAudience, "my-api")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DSN() tests
+// ---------------------------------------------------------------------------
+
 func TestDSN_BasicFormat(t *testing.T) {
 	db := DatabaseConfig{
 		Host:     "localhost",

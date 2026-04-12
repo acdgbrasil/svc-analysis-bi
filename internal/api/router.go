@@ -75,24 +75,30 @@ func NewRouter(deps RouterDeps) http.Handler {
 			logger.Warn("JWT authentication is DISABLED — no JWTValidator provided")
 		}
 
-		// Wire real handlers when stores are available, otherwise 501 placeholders.
-		if deps.Indicators != nil {
-			r.Get("/api/v1/indicators/{axis}", handlers.IndicatorsHandler(deps.Indicators))
-		} else {
-			r.Get("/api/v1/indicators/{axis}", placeholderHandler("indicators"))
-		}
-
 		encoders := deps.Encoders
 		if encoders == nil {
 			encoders = map[string]export.Encoder{}
 		}
 
+		// Indicators: requires 'analyst' or 'admin' role
 		if deps.Indicators != nil {
-			r.Get("/api/v1/export/{format}", handlers.ExportHandler(deps.Indicators, encoders, logger))
+			r.With(middleware.RoleGuard("analyst", "admin")).
+				Get("/api/v1/indicators/{axis}", handlers.IndicatorsHandler(deps.Indicators))
 		} else {
-			r.Get("/api/v1/export/{format}", placeholderHandler("export"))
+			r.With(middleware.RoleGuard("analyst", "admin")).
+				Get("/api/v1/indicators/{axis}", placeholderHandler("indicators"))
 		}
 
+		// Export: requires 'exporter' or 'admin' role
+		if deps.Indicators != nil {
+			r.With(middleware.RoleGuard("exporter", "admin")).
+				Get("/api/v1/export/{format}", handlers.ExportHandler(deps.Indicators, encoders, logger))
+		} else {
+			r.With(middleware.RoleGuard("exporter", "admin")).
+				Get("/api/v1/export/{format}", placeholderHandler("export"))
+		}
+
+		// Metadata: any authenticated user (no role guard)
 		r.Get("/api/v1/metadata/{resource}", handlers.MetadataHandler(encoders))
 	})
 

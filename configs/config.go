@@ -11,6 +11,7 @@ import (
 
 var (
 	ErrMissingSalt        = errors.New("config: PATIENT_HASH_SALT is required and must not be empty")
+	ErrMissingJWKS        = errors.New("config: JWKS_URL is required when AUTH_REQUIRED=true")
 	ErrInvalidPort        = errors.New("config: PORT must be between 1 and 65535")
 	ErrInvalidDBConfig    = errors.New("config: DB_USER and DB_PASSWORD are required")
 	ErrInvalidMaxConns    = errors.New("config: DB_MAX_CONNS must be a positive integer")
@@ -39,7 +40,10 @@ type NATSConfig struct {
 }
 
 type AuthConfig struct {
-	JWKSUrl string
+	JWKSUrl          string
+	AuthRequired     bool
+	ExpectedIssuer   string
+	ExpectedAudience string
 }
 
 type Config struct {
@@ -107,7 +111,10 @@ func Load() (Config, error) {
 			Consumer: envStr("NATS_CONSUMER", "analysis-bi"),
 		},
 		Auth: AuthConfig{
-			JWKSUrl: os.Getenv("JWKS_URL"),
+			JWKSUrl:          os.Getenv("JWKS_URL"),
+			AuthRequired:     envBool("AUTH_REQUIRED", true),
+			ExpectedIssuer:   os.Getenv("AUTH_ISSUER"),
+			ExpectedAudience: os.Getenv("AUTH_AUDIENCE"),
 		},
 		PatientHashSalt: salt,
 		LogLevel:        envStr("LOG_LEVEL", "info"),
@@ -129,6 +136,9 @@ func (c Config) Validate() error {
 	}
 	if c.Database.MaxConns < 1 {
 		return ErrInvalidMaxConns
+	}
+	if c.Auth.AuthRequired && c.Auth.JWKSUrl == "" {
+		return ErrMissingJWKS
 	}
 	return nil
 }
@@ -157,6 +167,18 @@ func envInt(key string, fallback int) (int, error) {
 		return fallback, nil
 	}
 	return strconv.Atoi(v)
+}
+
+func envBool(key string, fallback bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return fallback
+	}
+	return b
 }
 
 func envDuration(key string, fallback time.Duration) (time.Duration, error) {
