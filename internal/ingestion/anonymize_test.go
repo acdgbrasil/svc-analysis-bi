@@ -96,7 +96,7 @@ func TestAnonymize_BirthDateGeneralizedToAgeBand(t *testing.T) {
 	}{
 		{"infant born 2024", "2024-06-01", "0-4"},
 		{"child born 2018", "2018-03-15", "5-9"},
-		{"teenager born 2010", "2010-01-01", "10-14"},
+		{"teenager born 2010", "2010-01-01", "15-19"}, // age at occurredAt (2025-06-15) = 15
 		{"adult born 1990", "1990-07-20", "30-34"},
 		{"elderly born 1940", "1940-12-25", "80+"},
 	}
