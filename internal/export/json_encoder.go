@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 )
 
 // JSONEncoder encodes ExportData as JSON using the standard library.
@@ -49,7 +50,7 @@ func (e *JSONEncoder) Encode(w io.Writer, data ExportData) error {
 			KThreshold:   data.Metadata.KThreshold,
 			Suppressed:   data.Metadata.Suppressed,
 			TotalRecords: data.Metadata.TotalRecords,
-			GeneratedAt:  data.Metadata.GeneratedAt.Format("2006-01-02T15:04:05Z"),
+			GeneratedAt:  data.Metadata.GeneratedAt.UTC().Format(time.RFC3339),
 		},
 	}
 

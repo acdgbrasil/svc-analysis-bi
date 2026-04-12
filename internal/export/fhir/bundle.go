@@ -3,6 +3,7 @@ package fhir
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
 	"fmt"
 )
 
@@ -18,11 +19,10 @@ func NewBundle(timestamp string, entries []BundleEntry) Bundle {
 }
 
 // GenerateID creates a deterministic ID from components using SHA-256 truncated to 16 hex chars.
+// Components are joined with "|" delimiter to prevent hash collisions from concatenation ambiguity.
 func GenerateID(components ...string) string {
 	h := sha256.New()
-	for _, c := range components {
-		h.Write([]byte(c))
-	}
+	h.Write([]byte(strings.Join(components, "|")))
 	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 

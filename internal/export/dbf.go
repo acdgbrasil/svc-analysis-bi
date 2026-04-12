@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"time"
 )
 
 // DBFEncoder encodes ExportData in dBASE III format for DataSUS TABWIN
@@ -82,7 +81,7 @@ func (e *DBFEncoder) Encode(w io.Writer, data ExportData) error {
 	var buf bytes.Buffer
 
 	// DBF Header (32 bytes).
-	now := time.Now()
+	now := data.Metadata.GeneratedAt.UTC()
 	buf.WriteByte(dbfVersion)
 	buf.WriteByte(byte(now.Year() - 1900))
 	buf.WriteByte(byte(now.Month()))

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/acdgbrasil/svc-analysis-bi/internal/export/fhir"
 )
@@ -19,7 +21,7 @@ type FHIREncoder struct{}
 
 // Encode writes the export data as a FHIR Bundle to w.
 func (e *FHIREncoder) Encode(w io.Writer, data ExportData) error {
-	timestamp := data.Metadata.GeneratedAt.Format("2006-01-02T15:04:05Z")
+	timestamp := data.Metadata.GeneratedAt.UTC().Format(time.RFC3339)
 	entries := make([]fhir.BundleEntry, 0, len(data.Rows))
 
 	for i, row := range data.Rows {
@@ -87,7 +89,8 @@ func rowToEntry(row ExportRow, index int, period string) (fhir.BundleEntry, erro
 		if patientRef == "" {
 			patientRef = "Patient/unknown"
 		}
-		resource := fhir.NewEncounter(id, encType, classCode, period, period, patientRef)
+		pStart, pEnd := parseFHIRPeriod(period)
+		resource := fhir.NewEncounter(id, encType, classCode, pStart, pEnd, patientRef)
 		return fhir.NewBundleEntry(fhir.EncounterFullURL(id), resource), nil
 	}
 
@@ -110,8 +113,24 @@ func rowToEntry(row ExportRow, index int, period string) (fhir.BundleEntry, erro
 		value = toInt(v)
 	}
 
-	resource := fhir.NewObservation(id, code, display, value, period, period, patientRef)
+	pStart, pEnd := parseFHIRPeriod(period)
+	resource := fhir.NewObservation(id, code, display, value, pStart, pEnd, patientRef)
 	return fhir.NewBundleEntry(fhir.ObservationFullURL(id), resource), nil
+}
+
+// parseFHIRPeriod converts a period string to FHIR R4 dateTime start/end values.
+// Input formats: "YYYY-MM" or "YYYY-MM/YYYY-MM". FHIR R4 accepts "YYYY-MM" precision.
+// For a single month like "2025-01", start="2025-01" and end="2025-01".
+// For a range like "2025-01/2025-06", start="2025-01" and end="2025-06".
+func parseFHIRPeriod(period string) (start, end string) {
+	parts := strings.SplitN(period, "/", 2)
+	start = parts[0]
+	if len(parts) == 2 {
+		end = parts[1]
+	} else {
+		end = start
+	}
+	return start, end
 }
 
 // toInt converts an any value to int, best-effort.

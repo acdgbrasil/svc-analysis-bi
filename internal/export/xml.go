@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"time"
 )
 
 // XMLEncoder encodes ExportData as XML using the standard library.
@@ -64,7 +65,7 @@ func (e *XMLEncoder) Encode(w io.Writer, data ExportData) error {
 			KThreshold:   data.Metadata.KThreshold,
 			Suppressed:   data.Metadata.Suppressed,
 			TotalRecords: data.Metadata.TotalRecords,
-			GeneratedAt:  data.Metadata.GeneratedAt.Format("2006-01-02T15:04:05Z"),
+			GeneratedAt:  data.Metadata.GeneratedAt.UTC().Format(time.RFC3339),
 		},
 		Rows: xmlRows{Row: rows},
 	}

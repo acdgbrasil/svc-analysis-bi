@@ -11,6 +11,16 @@ import (
 // This is a minimal Parquet implementation that produces a valid Parquet file
 // with a single row group, plain encoding, and no compression.
 // It writes the PAR1 magic bytes, row group data, file metadata, and footer.
+//
+// TODO: Known limitations in the Thrift compact protocol encoding:
+//   - List header byte encoding uses a simplified approach that may not be
+//     parsed correctly by all Parquet readers for lists with >14 elements.
+//   - Zigzag encoding is applied uniformly via writeThriftCompactVarInt,
+//     including for length prefixes where unsigned encoding would be more correct.
+//   - Field ID delta encoding always uses absolute field IDs rather than deltas
+//     from the previous field, which produces slightly larger but valid output.
+//   For production use, consider replacing with a full Thrift library or the
+//   segmentio/parquet-go package.
 type ParquetEncoder struct{}
 
 // Parquet format constants.
@@ -108,7 +118,7 @@ func (e *ParquetEncoder) Encode(w io.Writer, data ExportData) error {
 	// FileMetaData struct:
 	writeThriftCompactI32(&metadata, 1, 1)              // field 1: version = 1
 	writeThriftCompactField(&metadata, thriftList, 2)    // field 2: schema (list of SchemaElement)
-	metadata.WriteByte(byte(thriftStruct<<4) | 0x0F)     // list header: type=struct
+	metadata.WriteByte(0xF0 | thriftStruct)               // list header: type=struct, size in next varint
 	writeThriftCompactVarInt(&metadata, int64(len(allKeys)+1)) // list size (root + columns)
 
 	// Root schema element
@@ -128,13 +138,13 @@ func (e *ParquetEncoder) Encode(w io.Writer, data ExportData) error {
 
 	// field 4: row_groups (list of RowGroup)
 	writeThriftCompactField(&metadata, thriftList, 4)
-	metadata.WriteByte(byte(thriftStruct<<4) | 0x0F) // list header: type=struct
+	metadata.WriteByte(0xF0 | thriftStruct)               // list header: type=struct, size in next varint
 	writeThriftCompactVarInt(&metadata, 1)            // one row group
 
 	// RowGroup:
 	// field 1: columns (list of ColumnChunk)
 	writeThriftCompactField(&metadata, thriftList, 1)
-	metadata.WriteByte(byte(thriftStruct<<4) | 0x0F) // list header: type=struct
+	metadata.WriteByte(0xF0 | thriftStruct)               // list header: type=struct, size in next varint
 	writeThriftCompactVarInt(&metadata, int64(len(allKeys)))
 
 	for colIdx, key := range allKeys {
@@ -144,11 +154,11 @@ func (e *ParquetEncoder) Encode(w io.Writer, data ExportData) error {
 		writeThriftCompactField(&metadata, thriftStruct, 2)
 		writeThriftCompactI32(&metadata, 1, 6)                              // type = BYTE_ARRAY
 		writeThriftCompactField(&metadata, thriftList, 2)                   // encodings
-		metadata.WriteByte(byte(thriftI32<<4) | 0x0F)                       // list of i32
+		metadata.WriteByte(0xF0 | thriftI32)                                // list of i32, size in next varint
 		writeThriftCompactVarInt(&metadata, 1)                              // one encoding
 		writeThriftCompactVarInt(&metadata, 0)                              // PLAIN
 		writeThriftCompactField(&metadata, thriftList, 3)                   // path_in_schema
-		metadata.WriteByte(byte(thriftBinary<<4) | 0x0F)                    // list of binary
+		metadata.WriteByte(0xF0 | thriftBinary)                             // list of binary, size in next varint
 		writeThriftCompactVarInt(&metadata, 1)
 		writeThriftCompactLenPrefixed(&metadata, []byte(key))
 		writeThriftCompactI32(&metadata, 4, 0)                              // codec: UNCOMPRESSED
