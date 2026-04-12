@@ -319,7 +319,7 @@ func (s *PgFactStore) UpsertFamilyComposition(ctx context.Context, record ingest
 	}
 
 	// Delta-based: increment or decrement family counters.
-	familyDelta := 0
+	familyDelta := -1
 	if p.IsAddition {
 		familyDelta = 1
 	}

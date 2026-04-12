@@ -25,9 +25,13 @@ type Resource struct {
 	ResourceType string        `json:"resourceType"`
 	ID           string        `json:"id,omitempty"`
 	Meta         *Meta         `json:"meta,omitempty"`
+	// Identifier contains ONLY anonymized identifiers (e.g. SHA-256 patient hash).
+	// NEVER populate with PII (CPF, CNS, NIS).
 	Identifier   []Identifier  `json:"identifier,omitempty"`
 	Extension    []Extension   `json:"extension,omitempty"`
 	Gender       string        `json:"gender,omitempty"`
+	// Address contains ONLY generalized geography (mesoregion level).
+	// NEVER populate with exact street, city, or CEP.
 	Address      []Address     `json:"address,omitempty"`
 	Code         *CodeableConcept `json:"code,omitempty"`
 	Subject      *Reference    `json:"subject,omitempty"`
