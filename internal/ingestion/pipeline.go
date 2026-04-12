@@ -156,7 +156,8 @@ func (p *pipeline) anonymizeStage(ctx context.Context, msg RawMessage, out chan<
 		}
 		dlqPayload := sanitizeForDLQ(msg.Data)
 		if err := p.eventStore.SendToDLQ(ctx, eventID, eventType, dlqPayload, ErrUnknownEventType.Error()); err != nil {
-			p.logger.Warn("failed to send unknown event to DLQ", "eventId", eventID, "error", err)
+			p.logger.Warn("failed to send unknown event to DLQ, skipping ack to force redelivery", "eventId", eventID, "error", err)
+			return // don't ack — DLQ failed, let NATS redeliver
 		}
 		if err := msg.Ack(); err != nil {
 			p.logger.Warn("failed to ack unknown event", "eventId", eventID, "error", err)
@@ -188,17 +189,23 @@ func (p *pipeline) anonymizeStage(ctx context.Context, msg RawMessage, out chan<
 		}
 		dlqPayload := sanitizeForDLQ(msg.Data)
 		if dlqErr := p.eventStore.SendToDLQ(ctx, eventID, msg.Subject, dlqPayload, err.Error()); dlqErr != nil {
-			p.logger.Warn("failed to send handler error to DLQ", "eventId", eventID, "error", dlqErr)
+			p.logger.Warn("failed to send handler error to DLQ, skipping ack to force redelivery", "eventId", eventID, "error", dlqErr)
+			return // don't ack — DLQ failed, let NATS redeliver
 		}
-		// Ack to prevent infinite redelivery of deterministic failures
+		// Ack only after DLQ persistence succeeds (prevents message loss)
 		if ackErr := msg.Ack(); ackErr != nil {
 			p.logger.Warn("failed to ack after DLQ routing", "eventId", eventID, "error", ackErr)
 		}
 		return
 	}
 
-	// 5. Send to materialization stage
-	out <- materializeJob{record: record, ack: msg.Ack}
+	// 5. Send to materialization stage (with context-aware select to prevent
+	// blocking on shutdown when anonCh is full)
+	select {
+	case out <- materializeJob{record: record, ack: msg.Ack}:
+	case <-ctx.Done():
+		p.logger.Warn("pipeline shutting down, dropping anonymized record", "eventId", record.EventID)
+	}
 }
 
 // materializeStage persists an anonymized record, marks it processed, and acks.
@@ -215,12 +222,16 @@ func (p *pipeline) materializeStage(ctx context.Context, job materializeJob) {
 		return
 	}
 
-	// Mark as processed (after successful materialization)
+	// Mark as processed (after successful materialization).
+	// If this fails, the event will be reprocessed on next delivery (safe due
+	// to idempotent UPSERTs), but we must NOT ack — otherwise the dedup marker
+	// is lost and the event could be double-counted on schema changes.
 	if err := p.eventStore.MarkProcessed(ctx, record.EventID, string(record.EventType)); err != nil {
-		p.logger.Warn("failed to mark event as processed", "eventId", record.EventID, "error", err)
+		p.logger.Warn("failed to mark event as processed, skipping ack", "eventId", record.EventID, "error", err)
+		return
 	}
 
-	// Ack (only after everything succeeded)
+	// Ack only after both materialization AND dedup marker succeed
 	if err := job.ack(); err != nil {
 		p.logger.Warn("failed to ack after successful materialization", "eventId", record.EventID, "error", err)
 	}
@@ -266,8 +277,8 @@ func extractEventID(data []byte) (string, bool) {
 }
 
 // sanitizeForDLQ strips PII from raw event data before sending to the dead-letter
-// queue. Only metadata (eventId, occurredAt, schemaVersion) and the event subject
-// are preserved. This ensures LGPD compliance in the DLQ table.
+// queue. Only metadata (eventId, occurredAt, schemaVersion) is preserved. The event
+// subject/type is passed separately to SendToDLQ. This ensures LGPD compliance.
 func sanitizeForDLQ(data []byte) []byte {
 	if len(data) == 0 {
 		return []byte(`{"metadata":{}}`)

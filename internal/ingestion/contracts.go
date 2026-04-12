@@ -205,10 +205,6 @@ type PipelineConfig struct {
 	// MaterializeWorkers is the number of goroutines running the
 	// materialization stage concurrently.
 	MaterializeWorkers int
-
-	// Salt is the secret used for one-way hashing of patient IDs.
-	// Loaded from configs.Config.PatientHashSalt.
-	Salt string
 }
 
 // ---------------------------------------------------------------------------

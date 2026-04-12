@@ -48,7 +48,7 @@ func TestPipeline_HappyPath_MessageFlowsThrough(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     1,
 		MaterializeWorkers:   1,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
@@ -124,7 +124,7 @@ func TestPipeline_HappyPath_MultipleMessages(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     1,
 		MaterializeWorkers:   1,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
@@ -174,7 +174,7 @@ func TestPipeline_UnknownEventType_SentToDLQ(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     1,
 		MaterializeWorkers:   1,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
@@ -242,7 +242,7 @@ func TestPipeline_DuplicateEvent_SkippedAndAcked(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     1,
 		MaterializeWorkers:   1,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
@@ -284,7 +284,7 @@ func TestPipeline_ContextCancellation_GracefulShutdown(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     1,
 		MaterializeWorkers:   1,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
@@ -350,7 +350,7 @@ func TestPipeline_AckOnlyAfterMaterialization(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     1,
 		MaterializeWorkers:   1,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
@@ -390,7 +390,7 @@ func TestPipeline_ConsumerConnectionError(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     1,
 		MaterializeWorkers:   1,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
@@ -424,7 +424,7 @@ func TestNewPipeline_ReturnsNonNil(t *testing.T) {
 		AnonymizedBufferSize: 10,
 		AnonymizeWorkers:     2,
 		MaterializeWorkers:   2,
-		Salt:                 salt,
+
 	}
 
 	pipeline := NewPipeline(cfg, consumer, registry, factStore, eventStore)
