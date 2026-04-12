@@ -11,6 +11,7 @@ import (
 
 var (
 	ErrMissingSalt        = errors.New("config: PATIENT_HASH_SALT is required and must not be empty")
+	ErrMissingJWKS        = errors.New("config: JWKS_URL is required when AUTH_REQUIRED=true")
 	ErrInvalidPort        = errors.New("config: PORT must be between 1 and 65535")
 	ErrInvalidDBConfig    = errors.New("config: DB_USER and DB_PASSWORD are required")
 	ErrInvalidMaxConns    = errors.New("config: DB_MAX_CONNS must be a positive integer")
@@ -135,6 +136,9 @@ func (c Config) Validate() error {
 	}
 	if c.Database.MaxConns < 1 {
 		return ErrInvalidMaxConns
+	}
+	if c.Auth.AuthRequired && c.Auth.JWKSUrl == "" {
+		return ErrMissingJWKS
 	}
 	return nil
 }

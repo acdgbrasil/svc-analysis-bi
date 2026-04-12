@@ -151,7 +151,7 @@ func run() int {
 		logger.Error("AUTH_REQUIRED is true but JWKS_URL is not configured — refusing to start without authentication")
 		return 1
 	}
-	if jwksURL != "" {
+	if cfg.Auth.AuthRequired && jwksURL != "" {
 		var jwksOpts []middleware.JWKSValidatorOption
 		if iss := strings.TrimSpace(cfg.Auth.ExpectedIssuer); iss != "" {
 			jwksOpts = append(jwksOpts, middleware.WithIssuer(iss))
@@ -161,7 +161,7 @@ func run() int {
 		}
 		jwtValidator = middleware.NewJWKSValidator(jwksURL, jwksOpts...)
 		logger.Info("JWT validation enabled", "jwks_url", jwksURL)
-	} else {
+	} else if !cfg.Auth.AuthRequired {
 		logger.Warn("JWKS_URL not configured, running in dev mode without authentication")
 	}
 

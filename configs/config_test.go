@@ -348,6 +348,34 @@ func TestLoad_AuthRequiredDefaultTrue(t *testing.T) {
 	}
 }
 
+func TestValidate_AuthRequiredWithoutJWKS_Fails(t *testing.T) {
+	cfg := Config{
+		PatientHashSalt: "salt",
+		Server:          ServerConfig{Port: 8080},
+		Database:        DatabaseConfig{User: "u", Password: "p", MaxConns: 5},
+		Auth:            AuthConfig{AuthRequired: true, JWKSUrl: ""},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("Validate() should fail when AUTH_REQUIRED=true and JWKS_URL is empty")
+	}
+	if err != ErrMissingJWKS {
+		t.Errorf("Validate() error = %v, want %v", err, ErrMissingJWKS)
+	}
+}
+
+func TestValidate_AuthRequiredWithJWKS_Passes(t *testing.T) {
+	cfg := Config{
+		PatientHashSalt: "salt",
+		Server:          ServerConfig{Port: 8080},
+		Database:        DatabaseConfig{User: "u", Password: "p", MaxConns: 5},
+		Auth:            AuthConfig{AuthRequired: true, JWKSUrl: "https://auth.example.com/keys"},
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() unexpected error: %v", err)
+	}
+}
+
 func TestLoad_AuthRequiredFalseWithNoJWKS(t *testing.T) {
 	t.Setenv("PATIENT_HASH_SALT", "salt")
 	t.Setenv("AUTH_REQUIRED", "false")
