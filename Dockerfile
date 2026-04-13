@@ -14,7 +14,7 @@ FROM scratch
 
 LABEL org.opencontainers.image.source="https://github.com/acdgbrasil/svc-analysis-bi"
 LABEL org.opencontainers.image.description="Descriptive analytics service for ACDG Brasil"
-LABEL org.opencontainers.image.licenses="UNLICENSED"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/svc-analysis-bi /bin/svc-analysis-bi
