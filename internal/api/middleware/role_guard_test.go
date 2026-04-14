@@ -130,3 +130,65 @@ func TestRoleGuard_EmptyRoles(t *testing.T) {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusForbidden)
 	}
 }
+
+// ─── Composite role matching tests ──────────────────────────────
+
+func TestRoleGuard_CompositeRoleMatchesSuffix(t *testing.T) {
+	handler := RoleGuard("analyst")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	ctx := context.WithValue(req.Context(), claimsContextKey{}, &Claims{
+		Subject: "user-1",
+		Roles:   []string{"analysis-bi:analyst"},
+	})
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d — composite role should match suffix", rr.Code, http.StatusOK)
+	}
+}
+
+func TestRoleGuard_CompositeAdminBypassesAll(t *testing.T) {
+	handler := RoleGuard("exporter")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	ctx := context.WithValue(req.Context(), claimsContextKey{}, &Claims{
+		Subject: "admin-user",
+		Roles:   []string{"analysis-bi:admin"},
+	})
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d — composite admin should bypass", rr.Code, http.StatusOK)
+	}
+}
+
+func TestRoleGuard_SuperadminBypassesAll(t *testing.T) {
+	handler := RoleGuard("exporter")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	ctx := context.WithValue(req.Context(), claimsContextKey{}, &Claims{
+		Subject: "super-user",
+		Roles:   []string{"superadmin"},
+	})
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d — superadmin should bypass all checks", rr.Code, http.StatusOK)
+	}
+}
