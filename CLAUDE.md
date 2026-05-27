@@ -111,3 +111,18 @@ Each agent writes a `REPORT.md` with a Public API section consumed by downstream
 - Handbook root: `handbook/README.md`
 - Agent definitions: `.claude/agents/`
 - Skill definitions: `.claude/skills/`
+
+## Reference Network — consulta fria (especialistas externos)
+
+Para FATOS de documentação de tecnologias (sintaxe, versão exata, comportamento), não responda de memória nem chute: consulte o especialista **EXTERNO read-only**, que cita a doc oficial offline (`infra/reference/`) ou recusa. Divisão: você (interno) conhece o código e **decide**; ele (externo) só entrega o **fato citado** — nunca vê seu código.
+
+Invocação: delegue isolado via `subagent_type: "acdg-ref:ref-<tech>"`, ou direto `/acdg-ref:ref-<tech> <pergunta>`.
+
+| Dúvida sobre… | Consulte |
+|---|---|
+| NATS/JetStream: durable consumer, ack, subjects, redelivery | `ref-nats` |
+| SQL, tipos, funções, índices, star-schema queries (PostgreSQL) | `ref-postgresql` |
+
+Ainda **fora da rede** (P2/P3): Go, chi, pgx, Parquet, FHIR, LGPD.
+
+Regras: passe a pergunta como **texto** (não mande "olhe meu arquivo X" — ele recusa). Se retornar `NÃO ENCONTRADO`, não invente: escale ou peça download da doc. Detalhes: `infra/reference-network/README.md`.
