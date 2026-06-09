@@ -54,27 +54,19 @@ type jwtHeader struct {
 
 // jwtPayload represents the decoded JWT payload with standard claims.
 type jwtPayload struct {
-	Sub   string `json:"sub"`
-	Exp   int64  `json:"exp"`
-	Iat   int64  `json:"iat"`
-	Iss   string `json:"iss"`
-	Aud   any    `json:"aud"`
-	Roles []string
+	Sub string `json:"sub"`
+	Exp int64  `json:"exp"`
+	Iat int64  `json:"iat"`
+	Iss string `json:"iss"`
+	Aud any    `json:"aud"`
 
-	// Zitadel-specific: roles may appear under different claim names.
-	// We check multiple fields during extraction.
-	RealmAccess    *realmAccess          `json:"realm_access,omitempty"`
-	ResourceRoles  map[string]roleAccess `json:"resource_access,omitempty"`
-	ZitadelRoles   []map[string]any      `json:"urn:zitadel:iam:org:project:roles,omitempty"`
-	RolesClaim     []string              `json:"roles,omitempty"`
-}
-
-type realmAccess struct {
-	Roles []string `json:"roles"`
-}
-
-type roleAccess struct {
-	Roles []string `json:"roles"`
+	// Authentik (the canonical BV IdP) models roles as GROUPS named
+	// "<system>:<role>" (e.g. "analysis-bi:analyst", "social-care:admin")
+	// plus the global "superadmin", delivered in the "groups" claim
+	// (svc-people-context ADR-029). "roles" is kept as a generic fallback for
+	// OIDC providers that expose a flat roles array.
+	Groups     []string `json:"groups,omitempty"`
+	RolesClaim []string `json:"roles,omitempty"`
 }
 
 // JWKSValidator validates JWT tokens against a JWKS endpoint.
@@ -358,30 +350,19 @@ func base64URLDecode(s string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(s)
 }
 
-// extractRoles extracts roles from various claim formats used by different
-// OIDC providers (Zitadel, Keycloak, generic).
+// extractRoles extracts roles from the validated JWT payload. Authentik
+// "groups" is the canonical BV claim; a flat "roles" array is accepted as a
+// generic fallback. Returns nil when no role claim is present.
 func extractRoles(p jwtPayload) []string {
-	// Direct roles claim
+	// Authentik (canonical BV IdP): groups "<system>:<role>" (e.g.
+	// "analysis-bi:analyst") + "superadmin" (people-context ADR-029).
+	if len(p.Groups) > 0 {
+		return p.Groups
+	}
+
+	// Generic fallback: flat "roles" array.
 	if len(p.RolesClaim) > 0 {
 		return p.RolesClaim
-	}
-
-	// Zitadel project roles: array of maps where keys are role names
-	if len(p.ZitadelRoles) > 0 {
-		var roles []string
-		for _, roleMap := range p.ZitadelRoles {
-			for roleName := range roleMap {
-				roles = append(roles, roleName)
-			}
-		}
-		if len(roles) > 0 {
-			return roles
-		}
-	}
-
-	// Keycloak realm_access.roles
-	if p.RealmAccess != nil && len(p.RealmAccess.Roles) > 0 {
-		return p.RealmAccess.Roles
 	}
 
 	return nil

@@ -355,8 +355,12 @@ func TestJWKSValidator_JWKSFetchFailure(t *testing.T) {
 	}
 }
 
-func TestJWKSValidator_ZitadelRoles(t *testing.T) {
-	key := generateTestKey(t, "zitadel-key")
+// TestJWKSValidator_AuthentikGroups verifies that roles delivered in the
+// Authentik "groups" claim (the canonical BV IdP, system-scoped "system:role"
+// names) are extracted end-to-end. This is the path exercised by real tokens
+// issued by the BV Authentik via the web BFF.
+func TestJWKSValidator_AuthentikGroups(t *testing.T) {
+	key := generateTestKey(t, "authentik-key")
 	jwksSrv := serveJWKS(t, key)
 
 	now := time.Now()
@@ -365,12 +369,10 @@ func TestJWKSValidator_ZitadelRoles(t *testing.T) {
 	)
 
 	token := signJWT(t, key, nil, map[string]any{
-		"sub": "zitadel-user",
-		"exp": now.Add(1 * time.Hour).Unix(),
-		"urn:zitadel:iam:org:project:roles": []map[string]any{
-			{"analyst": map[string]any{"org_id": "123"}},
-			{"viewer": map[string]any{"org_id": "456"}},
-		},
+		"sub":    "authentik-user",
+		"exp":    now.Add(1 * time.Hour).Unix(),
+		"iat":    now.Unix(),
+		"groups": []string{"analysis-bi:analyst", "social-care:worker"},
 	})
 
 	claims, err := validator.Validate(context.Background(), token)
@@ -378,21 +380,12 @@ func TestJWKSValidator_ZitadelRoles(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if claims.Subject != "zitadel-user" {
-		t.Errorf("subject = %q, want %q", claims.Subject, "zitadel-user")
+	if claims.Subject != "authentik-user" {
+		t.Errorf("subject = %q, want %q", claims.Subject, "authentik-user")
 	}
 
-	if len(claims.Roles) != 2 {
-		t.Errorf("roles count = %d, want 2; roles = %v", len(claims.Roles), claims.Roles)
-	}
-
-	// Roles from Zitadel maps -- check both are present (order may vary)
-	roleSet := make(map[string]bool)
-	for _, r := range claims.Roles {
-		roleSet[r] = true
-	}
-	if !roleSet["analyst"] || !roleSet["viewer"] {
-		t.Errorf("expected roles analyst and viewer, got %v", claims.Roles)
+	if len(claims.Roles) != 2 || claims.Roles[0] != "analysis-bi:analyst" || claims.Roles[1] != "social-care:worker" {
+		t.Errorf("roles = %v, want [analysis-bi:analyst social-care:worker]", claims.Roles)
 	}
 }
 
@@ -660,38 +653,27 @@ func TestExtractRoles(t *testing.T) {
 		expected []string
 	}{
 		{
-			name:     "direct roles claim",
+			name:     "authentik groups claim",
+			payload:  jwtPayload{Groups: []string{"analysis-bi:analyst", "superadmin"}},
+			expected: []string{"analysis-bi:analyst", "superadmin"},
+		},
+		{
+			name:     "generic roles fallback",
 			payload:  jwtPayload{RolesClaim: []string{"admin", "viewer"}},
 			expected: []string{"admin", "viewer"},
 		},
 		{
-			name: "zitadel roles",
+			name: "groups take priority over generic roles",
 			payload: jwtPayload{
-				ZitadelRoles: []map[string]any{
-					{"editor": map[string]any{}},
-				},
+				Groups:     []string{"analysis-bi:admin"},
+				RolesClaim: []string{"direct-role"},
 			},
-			expected: []string{"editor"},
-		},
-		{
-			name: "keycloak realm_access",
-			payload: jwtPayload{
-				RealmAccess: &realmAccess{Roles: []string{"realm-admin"}},
-			},
-			expected: []string{"realm-admin"},
+			expected: []string{"analysis-bi:admin"},
 		},
 		{
 			name:     "no roles",
 			payload:  jwtPayload{},
 			expected: nil,
-		},
-		{
-			name: "direct takes priority over zitadel",
-			payload: jwtPayload{
-				RolesClaim:   []string{"direct-role"},
-				ZitadelRoles: []map[string]any{{"zitadel-role": map[string]any{}}},
-			},
-			expected: []string{"direct-role"},
 		},
 	}
 
