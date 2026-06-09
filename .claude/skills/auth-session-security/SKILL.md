@@ -1,13 +1,13 @@
 ---
 name: auth-session-security
 description: >
-  Identity & Access Management expert for Go/chi with Zitadel OIDC.
+  Identity & Access Management expert for Go/chi with Authentik OIDC.
   Covers JWT verification, API key validation, NATS authentication, audit trail.
   Use when auditing or implementing authentication/authorization.
 user_invocable: true
 ---
 
-# Auth & Session Security -- Go / chi + Zitadel OIDC
+# Auth & Session Security -- Go / chi + Authentik OIDC
 
 ## JWT Verification
 
@@ -19,7 +19,9 @@ type Claims struct {
     Audience []string `json:"aud"`
     Expires  int64    `json:"exp"`
     NotBefore int64   `json:"nbf,omitempty"`
-    Roles    map[string]map[string]string `json:"urn:zitadel:iam:org:project:roles,omitempty"`
+    // Authentik delivers roles as groups "<system>:<role>" (e.g.
+    // "analysis-bi:analyst") + the global "superadmin" in the `groups` claim.
+    Groups   []string `json:"groups,omitempty"`
 }
 
 func (c *Claims) Validate(expectedIssuer, expectedAudience string) error {
@@ -36,10 +38,12 @@ func (c *Claims) Validate(expectedIssuer, expectedAudience string) error {
 }
 ```
 
-### Zitadel Configuration
-- **Issuer**: `https://auth.acdgbrasil.com.br`
-- **JWKS**: `https://auth.acdgbrasil.com.br/oauth/v2/keys`
-- **Roles claim path**: `urn:zitadel:iam:org:project:roles`
+### Authentik Configuration
+- **Issuer**: `<AUTHENTIK_URL>/application/o/<slug>/` (e.g. `https://auth.acdg-bv.org.br/application/o/<slug>/`)
+- **JWKS**: `<AUTHENTIK_URL>/application/o/<slug>/jwks/`
+- **Signing alg**: RS256 (the validator is RS256-only)
+- **Roles claim**: `groups` — values are `<system>:<role>` (e.g. `analysis-bi:analyst`) plus the global `superadmin`
+- **RBAC is system-scoped**: only `analysis-bi:*` (and bare `admin`/`superadmin`) grant access here; a foreign `social-care:admin` does not (see `RoleGuard`).
 
 ### JWT Middleware Pattern
 ```go

@@ -23,6 +23,11 @@ coverage.html
 .DS_Store
 Thumbs.db
 
+# Secrets / local env (the example template stays tracked)
+.env
+.env.*
+!.env.example
+
 # Pipeline artifacts (keep structure, ignore reports)
 .pipeline/*/003-*/
 .pipeline/*/004-*/

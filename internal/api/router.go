@@ -80,21 +80,21 @@ func NewRouter(deps RouterDeps) http.Handler {
 			encoders = map[string]export.Encoder{}
 		}
 
-		// Indicators: requires 'analyst' or 'admin' role
+		// Indicators: requires 'analyst' (admin/superadmin bypass in RoleGuard).
 		if deps.Indicators != nil {
-			r.With(middleware.RoleGuard("analyst", "admin")).
+			r.With(middleware.RoleGuard("analyst")).
 				Get("/api/v1/indicators/{axis}", handlers.IndicatorsHandler(deps.Indicators))
 		} else {
-			r.With(middleware.RoleGuard("analyst", "admin")).
+			r.With(middleware.RoleGuard("analyst")).
 				Get("/api/v1/indicators/{axis}", placeholderHandler("indicators"))
 		}
 
-		// Export: requires 'exporter' or 'admin' role
+		// Export: requires 'exporter' (admin/superadmin bypass in RoleGuard).
 		if deps.Indicators != nil {
-			r.With(middleware.RoleGuard("exporter", "admin")).
+			r.With(middleware.RoleGuard("exporter")).
 				Get("/api/v1/export/{format}", handlers.ExportHandler(deps.Indicators, encoders, logger))
 		} else {
-			r.With(middleware.RoleGuard("exporter", "admin")).
+			r.With(middleware.RoleGuard("exporter")).
 				Get("/api/v1/export/{format}", placeholderHandler("export"))
 		}
 
