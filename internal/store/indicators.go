@@ -38,14 +38,14 @@ type IndicatorParams struct {
 // IndicatorRow is a single row in an indicator query result.
 type IndicatorRow struct {
 	// Labels holds the dimension values for this row (e.g. "age_band", "sex").
-	Labels map[string]string
+	Labels map[string]string `json:"labels"`
 
 	// Value is the aggregate count or sum for this group.
-	Value int
+	Value int `json:"value"`
 
 	// Period is the formatted time label for this row (e.g. "2025-03",
 	// "2025-Q1", "2025") depending on the requested granularity.
-	Period string
+	Period string `json:"period"`
 }
 
 // IndicatorResult wraps the query results with suppression metadata.
